@@ -1,0 +1,1080 @@
+{
+    "info": {
+        "_postman_id": "e6f75d2a-92b4-4978-b7ae-5ad6595008a3",
+        "name": "API COBRANÇA SANTANDER - PRODUCAO",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "26208564"
+    },
+    "item": [
+        {
+            "name": "TOKEN",
+            "item": [
+                {
+                    "name": "Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    ""
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    ""
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "urlencoded",
+                            "urlencoded": [
+                                {
+                                    "key": "client_id",
+                                    "value": "client_id",
+                                    "description": "informe o Client ID no campo Value",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "client_secret",
+                                    "value": "client_secret",
+                                    "description": "informe o Client Secret no campo Value",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "grant_type",
+                                    "value": "client_credentials",
+                                    "description": "Informe \"client_credentials\"",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/auth/oauth/v2/token",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "auth",
+                                "oauth",
+                                "v2",
+                                "token"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "WORKSPACE",
+            "item": [
+                {
+                    "name": "Criar Workspace",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"type\": \"BILLING\",\r\n    \"description\": \"Workspace de Cobrança\",\r\n    \"covenants\": [\r\n        {\r\n            \"code\": \"1234567\"\r\n        }\r\n    ]\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                ""
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Criar Workspace com Webhook",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"type\": \"BILLING\",\r\n    \"description\": \"Workspace de Cobrança\",\r\n    \"covenants\": [\r\n        {\r\n            \"code\": \"1234567\"\r\n        }\r\n    ],\r\n    \"webhookURL\": \"https://suaurl.com.br\",\r\n    \"bankSlipBillingWebhookActive\": true,\r\n    \"pixBillingWebhookActive\": true\r\n}\r\n",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                ""
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Consulta Workspaces",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                ""
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Consulta Workspace por ID",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/{WORKSPACE_ID}",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "{WORKSPACE_ID}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Alterar Workspace",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"covenants\": [\r\n    {\r\n      \"code\": 1234567\r\n    }\r\n  ],\r\n    \"description\":\"Patch da Workspace\"\r\n}\r\n",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/{WORKSPACE_ID}",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "{WORKSPACE_ID}"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Detelar Workspace",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/{WORKSPACE_ID}",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "{WORKSPACE_ID}"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "BOLETO [BANK_SLIP]",
+            "item": [
+                {
+                    "name": "Registro de Boleto",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"environment\": \"TESTE\",\r\n    \"nsuCode\": \"TST123\",\r\n    \"nsuDate\": \"2023-05-11\",\r\n    \"covenantCode\": 1234567,\r\n    \"bankNumber\": \"1020\",\r\n    \"clientNumber\": \"SEU NUMERO\",\r\n    \"dueDate\": \"2023-05-11\",\r\n    \"issueDate\": \"2023-05-09\",\r\n    \"participantCode\": \"CODIGO 1234\",\r\n    \"nominalValue\": 10.00,\r\n    \"payer\": {\r\n        \"name\": \"João da Silva\",\r\n        \"documentType\": \"CPF\",\r\n        \"documentNumber\": \"12345678901\",\r\n        \"address\": \"rua nove de janeiro\",\r\n        \"neighborhood\": \"bela vista\",\r\n        \"city\": \"sao paulo\",\r\n        \"state\": \"SP\",\r\n        \"zipCode\": \"05134-897\"\r\n    },\r\n    \"documentKind\": \"DUPLICATA_MERCANTIL\",\r\n    \"deductionValue\": \"0.10\",\r\n    \"paymentType\": \"REGISTRO\",\r\n    \"writeOffQuantityDays\": \"30\",\r\n    \"messages\": [\r\n        \"mensagem um\",\r\n        \"mensagem dois\"\r\n    ],\r\n    \"key\": {\r\n        \"type\": \"EMAIL\",\r\n        \"dictKey\": \"suachave@suachave.com.br\"\r\n    },\r\n    \"discount\": {\r\n        \"type\": \"VALOR_DATA_FIXA\",\r\n        \"discountOne\": {\r\n            \"value\": \"1.00\",\r\n            \"limitDate\": \"2023-05-10\"\r\n        }\r\n    },\r\n    \"interestPercentage\": \"30.00\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/{WORKSPACE_ID}/bank_slips",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "{WORKSPACE_ID}",
+                                "bank_slips"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Instruções",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "\r\n// INDICACAO DE TODAS AS INSTRUCOES POSSIVEIS. É PERMITIDO ENVIAR ATÉ 10 INSTRUCOES POR REQUISICAO.\r\n// REMOVER ESTAS LINHAS PARA TESTAR\r\n// PARA MAIORES INFORMAÇÕES, ACESSE O NOSSO USERGUIDE DA API DE COBRANÇA: https://developer.santander.com.br/api/documentacao/api-de-emissao-de-boletos#/\r\n\r\n{\r\n    \"covenantCode\": \"1234567\",\r\n    \"bankNumber\": \"123\",\r\n\r\n    \"operation\": \"BAIXAR\",\r\n\r\n    \"clientNumber\": \"12345\",\r\n\r\n    \"dueDate\": \"2022-09-16\",\r\n\r\n    \"discount\": {\r\n        \"type\": \"ISENTO\",\r\n        \"discountOne\": {\r\n            \"value\": \"10.00\",\r\n            \"limitDate\": \"2022-09-16\"\r\n        },\r\n        \"discountTwo\": {\r\n            \"value\": \"10.00\",\r\n            \"limitDate\": \"2022-09-16\"\r\n        },\r\n        \"discountThree\": {\r\n            \"value\": \"10.00\",\r\n            \"limitDate\": \"2022-09-16\"\r\n        }\r\n    },\r\n\r\n    \"nominalValue\": \"100.00\",\r\n\r\n    \"finePercentage\": \"50.00\",\r\n    \"fineDate\": \"2022-09-16\",\r\n\r\n    \"deductionValue\": \"10.00\",\r\n\r\n    \"protestQuantityDays\": \"99\",\r\n\r\n    \"writeOffQuantityDays\": \"90\",\r\n\r\n    \"paymentValueType\": \"VALOR\",\r\n    \"minValueOrPercentage\": \"10.00\",\r\n    \"maxValueOrPercentage\": \"10.00\",\r\n\r\n    \"participantCode\": \"123456\"\r\n\r\n}\r\n",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/{WORKSPACE_ID}/bank_slips",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "{WORKSPACE_ID}",
+                                "bank_slips"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "CONSULTA SIMPLES [BANK_SLIP)",
+            "item": [
+                {
+                    "name": "SONDA",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/workspaces/{WORKSPACE_ID}/bank_slips/{BANK_SLIP_ID}",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "{WORKSPACE_ID}",
+                                "bank_slips",
+                                "{BANK_SLIP_ID}"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "CONSULTA DETALHADA [BILLS]",
+            "item": [
+                {
+                    "name": "Simples Nosso Número",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills?beneficiaryCode=1234567&bankNumber=1234567890123",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills"
+                            ],
+                            "query": [
+                                {
+                                    "key": "beneficiaryCode",
+                                    "value": "1234567"
+                                },
+                                {
+                                    "key": "bankNumber",
+                                    "value": "1234567890123"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Simples Seu Número",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills?beneficiaryCode=1234567&clientNumber=123456789012345&dueDate=2023-01-01&nominalValue=1234567890123.45",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills"
+                            ],
+                            "query": [
+                                {
+                                    "key": "beneficiaryCode",
+                                    "value": "1234567"
+                                },
+                                {
+                                    "key": "clientNumber",
+                                    "value": "123456789012345"
+                                },
+                                {
+                                    "key": "dueDate",
+                                    "value": "2023-01-01"
+                                },
+                                {
+                                    "key": "nominalValue",
+                                    "value": "1234567890123.45"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "2a Via Boleto",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills/1234567.1234567890123?tipoConsulta=duplicate",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "1234567.1234567890123"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "duplicate"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Padrão/Default",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills/1234567.1234567890123?tipoConsulta=default",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "1234567.1234567890123"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "default"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Dados Cartório/Registry",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills/1234567.1234567890123?tipoConsulta=registry",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "1234567.1234567890123"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "registry"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Dados Boleto",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills/1234567.1234567890123?tipoConsulta=bankslip",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "1234567.1234567890123"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "bankslip"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Liquidado/Baixado/Settlement",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills/1234567.1234567890123?tipoConsulta=settlement",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "1234567.1234567890123"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "settlement"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "GERAR BOLETO EM PDF [BILLS]",
+            "item": [
+                {
+                    "name": "Request com BankNumber + BeneficiaryCode",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"payerDocumentNumber\": 12345678900\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills/{bankNumber}.{covenantCode}/bank_slips",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "{bankNumber}.{covenantCode}",
+                                "bank_slips"
+                            ]
+                        },
+                        "description": "Para realização da chamada é necessário que nas variaveis da collection seja setado o bankNumber e o beneficiaryCode junto ao token"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Request com DigitableLine",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"payerDocumentNumber\": 12345678900\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-open.api.santander.com.br/collection_bill_management/v2/bills/{digitableLine}/bank_slips",
+                            "protocol": "https",
+                            "host": [
+                                "trust-open",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "{digitableLine}",
+                                "bank_slips"
+                            ]
+                        },
+                        "description": "Para realização da chamada é necessário que nas variaveis da collection seja setado o digitableLine junto ao token"
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "Client_Id",
+            "value": "Y8Sq9TLh9JdiQLSmyjEMntAkvSeKS45c"
+        }
+    ]
+}

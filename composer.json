@@ -1,0 +1,35 @@
+{
+    "name": "api-boleto/api-boleto",
+    "description": "Biblioteca PHP unificada para emissão, consulta, alteração e cancelamento de boletos bancários via APIs de múltiplos bancos brasileiros.",
+    "type": "library",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=7.4",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-openssl": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "ApiBoleto\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ApiBoleto\\Tests\\": "tests/"
+        }
+    },
+    "keywords": [
+        "boleto",
+        "cobranca",
+        "banco",
+        "santander",
+        "pagamento",
+        "bolecode",
+        "brasil"
+    ]
+}

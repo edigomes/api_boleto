@@ -1,0 +1,897 @@
+{
+    "info": {
+        "_postman_id": "06bf15df-9059-4133-af38-75c7b76c3b33",
+        "name": "API COBRANÇA SANTANDER - SANDBOX",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "26208564"
+    },
+    "item": [
+        {
+            "name": "TOKEN",
+            "item": [
+                {
+                    "name": "TOKEN",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "urlencoded",
+                            "urlencoded": [
+                                {
+                                    "key": "client_id",
+                                    "value": "client_id",
+                                    "description": "informe o Client ID no campo Value",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "client_secret",
+                                    "value": "client_secret",
+                                    "description": "informe o Client Secret no campo Value",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "grant_type",
+                                    "value": "client_credentials",
+                                    "description": "Informe \"client_credentials\"",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/auth/oauth/v2/token",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "auth",
+                                "oauth",
+                                "v2",
+                                "token"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "WORKSPACE",
+            "item": [
+                {
+                    "name": "CRIAR WORKSPACE",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"type\": \"BILLING\",\r\n    \"covenants\": [\r\n        {\r\n            \"code\": 3567206\r\n        }\r\n    ],\r\n    \"description\": \"Testando\",\r\n    \"bankSlipBillingWebhookActive\": true,\r\n    \"pixBillingWebhookActive\": true,\r\n    \"webhookURL\": \"https://teste\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/workspaces",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CONSULTAR WORKSPACE",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/workspaces",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CONSULTAR WORKSPACE POR ID",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/workspaces/7873ca2b-8d45-41f8-8fb0-c8aa834cd2ca",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "7873ca2b-8d45-41f8-8fb0-c8aa834cd2ca"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DELETAR WORKSPACE",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/workspaces/7873ca2b-8d45-41f8-8fb0-c8aa834cd2ca",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "7873ca2b-8d45-41f8-8fb0-c8aa834cd2ca"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "ALTERAR WORKSPACE",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"covenants\": [\r\n        {\r\n            \"code\": 3567206\r\n        }\r\n    ],\r\n    \"description\": \"Testando\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/workspaces/7873ca2b-8d45-41f8-8fb0-c8aa834cd2ca",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "7873ca2b-8d45-41f8-8fb0-c8aa834cd2ca"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "BOLETO",
+            "item": [
+                {
+                    "name": "REGISTRAR BOLETO",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"environment\": \"PRODUCAO\",\r\n    \"nsuCode\": 1014,\r\n    \"nsuDate\": \"2023-05-09\",\r\n    \"covenantCode\": 3567206,\r\n    \"bankNumber\": \"1014\",\r\n    \"clientNumber\": \"123\",\r\n    \"dueDate\": \"2023-05-09\",\r\n    \"issueDate\": \"2023-05-09\",\r\n    \"participantCode\": \"teste liq abat\",\r\n    \"nominalValue\": 1.00,\r\n    \"payer\": {\r\n        \"name\": \"João da Silva santos\",\r\n        \"documentType\": \"CPF\",\r\n        \"documentNumber\": \"94620639079\",\r\n        \"address\": \"rua nove de janeiro\",\r\n        \"neighborhood\": \"bela vista\",\r\n        \"city\": \"sao paulo\",\r\n        \"state\": \"SP\",\r\n        \"zipCode\": \"05134-897\"\r\n    },\r\n    \"beneficiary\": {\r\n        \"name\": \"João da Silva\",\r\n        \"documentType\": \"CNPJ\",\r\n        \"documentNumber\": \"20201210000155\"\r\n    },\r\n    \"documentKind\": \"DUPLICATA_MERCANTIL\",\r\n    \"deductionValue\": \"0.10\",\r\n    \"paymentType\": \"REGISTRO\",\r\n    \"writeOffQuantityDays\": \"30\",\r\n    \"messages\": [\r\n        \"mensagem um\",\r\n        \"mensagem dois\"\r\n    ]\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/workspaces/579d0608-188d-4f32-b301-da4c388a673b/bank_slips",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "579d0608-188d-4f32-b301-da4c388a673b",
+                                "bank_slips"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "INSTRUÇÕES",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"covenantCode\": \"3567206\",\r\n    \"bankNumber\": \"123\",\r\n    \"operation\": \"BAIXAR\"\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/workspaces/579d0608-188d-4f32-b301-da4c388a673b/bank_slips",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "579d0608-188d-4f32-b301-da4c388a673b",
+                                "bank_slips"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "CONSULTA SIMPLES",
+            "item": [
+                {
+                    "name": "CONSULTA SONDA",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/workspaces/a5d97822-9709-4a55-8b26-37c1707c8a1f/bank_slips/1014.2023-05-09.P.3567206.1014",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "workspaces",
+                                "a5d97822-9709-4a55-8b26-37c1707c8a1f",
+                                "bank_slips",
+                                "1014.2023-05-09.P.3567206.1014"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "CONSULTA DETALHADA",
+            "item": [
+                {
+                    "name": "CONSULTA NN",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/bills?beneficiaryCode=356720&bankNumber=10054325",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills"
+                            ],
+                            "query": [
+                                {
+                                    "key": "beneficiaryCode",
+                                    "value": "356720"
+                                },
+                                {
+                                    "key": "bankNumber",
+                                    "value": "10054325"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "CONSULTA SN",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/bills?beneficiaryCode=356720&bankNumber=10054325&dueDate=2023-04-25&nominalValue=100.00",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills"
+                            ],
+                            "query": [
+                                {
+                                    "key": "beneficiaryCode",
+                                    "value": "356720"
+                                },
+                                {
+                                    "key": "bankNumber",
+                                    "value": "10054325"
+                                },
+                                {
+                                    "key": "dueDate",
+                                    "value": "2023-04-25"
+                                },
+                                {
+                                    "key": "nominalValue",
+                                    "value": "100.00"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "BANKSLIP",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/bills/3567206.1005?tipoConsulta=bankslips",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "3567206.1005"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "bankslips"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DEFAULT",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/bills/3567206.1005?tipoConsulta=default",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "3567206.1005"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "default"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "DUPLICATE",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/bills/3567206.1011?tipoConsulta=duplicate",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "3567206.1011"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "duplicate"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "REGISTRY",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "description": "informe o Client ID no campo Value",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/bills/3567206.1005?tipoConsulta=registry",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "3567206.1005"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "registry"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "SETTLEMENT",
+                    "request": {
+                        "auth": {
+                            "type": "oauth2",
+                            "oauth2": [
+                                {
+                                    "key": "headerPrefix",
+                                    "value": "Bearer",
+                                    "type": "string"
+                                },
+                                {
+                                    "key": "addTokenTo",
+                                    "value": "header",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "X-Application-Key",
+                                "value": "client_id",
+                                "type": "text",
+                                "description": "informe o Client ID no campo Value"
+                            }
+                        ],
+                        "url": {
+                            "raw": "https://trust-sandbox.api.santander.com.br/collection_bill_management/v2/bills/3567206.1005?tipoConsulta=settlement",
+                            "protocol": "https",
+                            "host": [
+                                "trust-sandbox",
+                                "api",
+                                "santander",
+                                "com",
+                                "br"
+                            ],
+                            "path": [
+                                "collection_bill_management",
+                                "v2",
+                                "bills",
+                                "3567206.1005"
+                            ],
+                            "query": [
+                                {
+                                    "key": "tipoConsulta",
+                                    "value": "settlement"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}
