@@ -250,8 +250,8 @@ $instrucao = InstrucaoBoleto::fromArray([
 $config = [
     'clientId'        => 'seu-client-id',        // obrigatório
     'clientSecret'    => 'seu-client-secret',     // obrigatório
-    'certFile'        => '/caminho/cert.pem',     // obrigatório (mTLS)
-    'certKeyFile'     => '/caminho/key.pem',      // obrigatório (mTLS)
+    'certFile'        => '/caminho/cert.pem',     // obrigatório* (mTLS via path)
+    'certKeyFile'     => '/caminho/key.pem',      // obrigatório* (mTLS via path)
     'certKeyPassword' => '',                      // opcional
     'ambiente'        => 'sandbox',               // default: 'producao'
     'workspaceId'     => 'ws-id',                 // obrigatório para operações de boleto
@@ -259,6 +259,50 @@ $config = [
     'tokenStorage'    => $minhaInstancia,          // implementação de TokenStorageInterface
     'tokenKey'        => 'chave_customizada',     // opcional (default: santander_token_{ambiente})
 ];
+```
+
+### Certificados mTLS - Duas Formas
+
+A lib aceita certificados mTLS de **duas formas**. Informe uma delas:
+
+**Opção 1: Caminhos de arquivo** (para quando os `.pem` estão no disco)
+
+```php
+$config = [
+    // ...
+    'certFile'        => '/caminho/para/certificado.pem',
+    'certKeyFile'     => '/caminho/para/chave-privada.pem',
+    'certKeyPassword' => 'senha-opcional',
+];
+```
+
+**Opção 2: Conteúdo em string** (para quando os certificados estão no S3, banco de dados, variáveis de ambiente, etc.)
+
+```php
+$config = [
+    // ...
+    'certContent'     => $certPemString,   // conteúdo PEM do certificado
+    'certKeyContent'  => $keyPemString,    // conteúdo PEM da chave privada
+    'certKeyPassword' => 'senha-opcional',
+];
+```
+
+Quando você usa `certContent` / `certKeyContent`, a lib cria automaticamente arquivos temporários seguros (permissão `0600`) que são limpos quando o gateway é destruído. Ideal para **Laravel multi-tenant** onde cada tenant tem seu certificado em banco/S3:
+
+```php
+// Exemplo: Laravel multi-tenant com certificados do S3
+$tenant = Tenant::current();
+
+$gateway = $manager->banco('santander', [
+    'clientId'       => $tenant->santander_client_id,
+    'clientSecret'   => $tenant->santander_client_secret,
+    'certContent'    => Storage::disk('s3')->get($tenant->cert_path),
+    'certKeyContent' => Storage::disk('s3')->get($tenant->key_path),
+    'tokenStorage'   => app(TokenStorageInterface::class),
+    'tokenKey'       => "santander_{$tenant->id}_sandbox",
+    'workspaceId'    => $tenant->santander_workspace_id,
+    'ambiente'       => 'sandbox',
+]);
 ```
 
 ### Workspace Management
@@ -290,19 +334,94 @@ $workspaces = $gateway->listarWorkspaces();
 $workspace = $gateway->consultarWorkspace('workspace-id');
 ```
 
-## Adicionando Novos Bancos
+## Schema de Configuração
 
-Para adicionar suporte a um novo banco, implemente a interface `BoletoGatewayInterface`:
+Cada banco define um `ConfigSchema` que descreve e valida seus campos de configuração. Isso permite consultar programaticamente quais campos são necessários antes de instanciar o gateway.
+
+### Consultar schema de um banco
 
 ```php
+$manager = new BoletoManager();
+
+// Obter schema sem instanciar o gateway
+$schema = $manager->configSchema('santander');
+
+// Ver todos os campos com tipo, obrigatoriedade e descrição
+$campos = $schema->describe();
+foreach ($campos as $nome => $info) {
+    echo "{$nome}: {$info['label']}";
+    echo $info['required'] ? ' (obrigatório)' : ' (opcional)';
+    echo "\n";
+}
+```
+
+### Schema do Santander
+
+| Campo | Tipo | Obrigatório | Default | Descrição |
+|-------|------|:-----------:|---------|-----------|
+| `clientId` | string | Sim | - | Client ID da aplicação no Santander Developer |
+| `clientSecret` | string | Sim | - | Client Secret da aplicação |
+| `certFile` | string | * | - | Caminho do certificado PEM |
+| `certKeyFile` | string | * | - | Caminho da chave privada PEM |
+| `certContent` | string | * | - | Conteúdo PEM do certificado (alternativa) |
+| `certKeyContent` | string | * | - | Conteúdo PEM da chave privada (alternativa) |
+| `tokenStorage` | TokenStorageInterface | ** | - | Instância de armazenamento de tokens |
+| `tokenPath` | string | ** | - | Diretório para armazenar tokens (alternativa) |
+| `certKeyPassword` | string | Não | `''` | Senha da chave privada |
+| `ambiente` | string | Não | `'producao'` | Ambiente (producao/sandbox) |
+| `workspaceId` | string | Não | `''` | ID do workspace |
+| `tokenKey` | string | Não | auto | Chave única do token |
+| `baseUrl` | string | Não | auto | URL base customizada |
+| `httpClient` | mixed | Não | CurlHttpClient | Cliente HTTP customizado |
+
+\* Informe `certFile`+`certKeyFile` **ou** `certContent`+`certKeyContent`
+\*\* Informe `tokenStorage` **ou** `tokenPath`
+
+### Validação automática
+
+A validação acontece automaticamente ao instanciar o gateway. Erros são agregados em uma única exceção:
+
+```php
+try {
+    $gateway = $manager->banco('santander', []);
+} catch (BoletoException $e) {
+    echo $e->getMessage();
+    // "Configuracao invalida para o gateway Santander:
+    //  - Campo 'clientId' e obrigatorio (Client ID da aplicacao no Santander Developer).
+    //  - Campo 'clientSecret' e obrigatorio (Client Secret da aplicacao).
+    //  - Certificado mTLS obrigatorio. Informe 'certFile'+'certKeyFile' (paths) ou ...
+    //  - Armazenamento de token obrigatorio. Informe 'tokenStorage' ou 'tokenPath'."
+}
+```
+
+## Adicionando Novos Bancos
+
+Para adicionar suporte a um novo banco, implemente `BoletoGatewayInterface` e opcionalmente `ConfigurableGatewayInterface`:
+
+```php
+use ApiBoleto\Config\ConfigSchema;
 use ApiBoleto\Contracts\BoletoGatewayInterface;
+use ApiBoleto\Contracts\ConfigurableGatewayInterface;
 use ApiBoleto\DTO\Boleto;
 use ApiBoleto\DTO\BoletoResponse;
 use ApiBoleto\DTO\InstrucaoBoleto;
 
-class MeuBancoGateway implements BoletoGatewayInterface
+class MeuBancoGateway implements BoletoGatewayInterface, ConfigurableGatewayInterface
 {
-    public function __construct(array $config) { /* ... */ }
+    public function __construct(array $config)
+    {
+        self::configSchema()->validate($config);
+        // ...
+    }
+
+    public static function configSchema(): ConfigSchema
+    {
+        return ConfigSchema::create('MeuBanco')
+            ->required('apiKey', 'string', 'Chave de API')
+            ->required('agencia', 'string', 'Numero da agencia')
+            ->optional('ambiente', 'string', 'producao', 'Ambiente');
+    }
+
     public function criarBoleto(Boleto $boleto): BoletoResponse { /* ... */ }
     public function consultarBoleto(string $identificador): BoletoResponse { /* ... */ }
     public function consultarBoletos(array $filtros = []): array { /* ... */ }
@@ -314,6 +433,11 @@ class MeuBancoGateway implements BoletoGatewayInterface
 
 // Registrar no manager
 $manager->registrarBanco('meubanco', MeuBancoGateway::class);
+
+// Consultar schema antes de usar
+$schema = $manager->configSchema('meubanco');
+
+// Usar
 $gateway = $manager->banco('meubanco', $config);
 ```
 
@@ -321,8 +445,11 @@ $gateway = $manager->banco('meubanco', $config);
 
 ```
 src/
+├── Config/                       # Validação de configuração
+│   └── ConfigSchema.php
 ├── Contracts/                    # Interfaces
 │   ├── BoletoGatewayInterface.php
+│   ├── ConfigurableGatewayInterface.php
 │   ├── BankSetupInterface.php
 │   ├── AuthenticatorInterface.php
 │   ├── HttpClientInterface.php
@@ -336,8 +463,9 @@ src/
 │   ├── Desconto.php
 │   ├── Multa.php
 │   └── Juros.php
-├── Http/                         # Cliente HTTP
-│   └── CurlHttpClient.php
+├── Http/                         # Cliente HTTP e utilitários
+│   ├── CurlHttpClient.php
+│   └── CertificateHelper.php
 ├── Storage/                      # Armazenamento de tokens
 │   └── FileTokenStorage.php
 ├── Exceptions/                   # Exceções

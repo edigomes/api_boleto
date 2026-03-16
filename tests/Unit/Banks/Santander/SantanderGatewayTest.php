@@ -385,6 +385,37 @@ class SantanderGatewayTest extends TestCase
         ]);
     }
 
+    public function testErroSemCertificadoLancaException(): void
+    {
+        $this->expectException(BoletoException::class);
+        $this->expectExceptionMessage('Certificado mTLS obrigatorio');
+
+        new SantanderGateway([
+            'clientId'     => 'x',
+            'clientSecret' => 'x',
+            'tokenStorage' => $this->tokenStorage,
+        ]);
+    }
+
+    public function testCriarGatewayComCertContent(): void
+    {
+        $this->enqueueAuthResponse();
+        $this->fakeHttp->addResponse(200, ['id' => 'slip-content', 'status' => 'OPEN']);
+
+        $gateway = new SantanderGateway([
+            'clientId'       => 'test-client-id',
+            'clientSecret'   => 'test-client-secret',
+            'certContent'    => '-----BEGIN CERTIFICATE-----\nFAKE\n-----END CERTIFICATE-----',
+            'certKeyContent' => '-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----',
+            'tokenStorage'   => $this->tokenStorage,
+            'workspaceId'    => 'ws-content',
+            'httpClient'     => $this->fakeHttp,
+        ]);
+
+        $response = $gateway->consultarBoleto('slip-content');
+        $this->assertSame('slip-content', $response->id);
+    }
+
     public function testErroSemTokenStorageNemTokenPath(): void
     {
         $this->expectException(BoletoException::class);

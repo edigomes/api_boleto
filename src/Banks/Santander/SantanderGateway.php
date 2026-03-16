@@ -2,18 +2,21 @@
 
 namespace ApiBoleto\Banks\Santander;
 
+use ApiBoleto\Config\ConfigSchema;
 use ApiBoleto\Contracts\BankSetupInterface;
 use ApiBoleto\Contracts\BoletoGatewayInterface;
+use ApiBoleto\Contracts\ConfigurableGatewayInterface;
 use ApiBoleto\Contracts\HttpClientInterface;
 use ApiBoleto\Contracts\TokenStorageInterface;
 use ApiBoleto\DTO\Boleto;
 use ApiBoleto\DTO\BoletoResponse;
 use ApiBoleto\DTO\InstrucaoBoleto;
 use ApiBoleto\Exceptions\BoletoException;
+use ApiBoleto\Http\CertificateHelper;
 use ApiBoleto\Http\CurlHttpClient;
 use ApiBoleto\Storage\FileTokenStorage;
 
-class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface
+class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface, ConfigurableGatewayInterface
 {
     private const BASE_URLS = [
         'producao' => 'https://trust-open.api.santander.com.br',
@@ -43,8 +46,8 @@ class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface
     /** @var string */
     private string $workspaceId;
 
-    /** @var array */
-    private array $certConfig;
+    /** @var CertificateHelper */
+    private CertificateHelper $certificateHelper;
 
     public function __construct(array $config)
     {
@@ -55,11 +58,7 @@ class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface
         $this->clientId = $config['clientId'];
         $this->workspaceId = $config['workspaceId'] ?? '';
 
-        $this->certConfig = [
-            'certFile' => $config['certFile'],
-            'certKeyFile' => $config['certKeyFile'],
-            'certKeyPassword' => $config['certKeyPassword'] ?? '',
-        ];
+        $this->certificateHelper = new CertificateHelper($config);
 
         $this->httpClient = $config['httpClient'] ?? new CurlHttpClient();
         $this->mapper = new SantanderMapper($this->ambiente);
@@ -75,7 +74,7 @@ class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface
             $this->baseUrl,
             $this->clientId,
             $config['clientSecret'],
-            $this->certConfig
+            $this->certificateHelper->toCertConfig()
         );
     }
 
@@ -411,7 +410,7 @@ class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface
                 'Authorization: Bearer ' . $token,
                 'X-Application-Key: ' . $this->clientId,
             ],
-            'cert' => $this->certConfig,
+            'cert' => $this->certificateHelper->toCertConfig(),
             'rawResponse' => $rawResponse,
         ];
 
@@ -498,21 +497,32 @@ class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface
         return $aliases[$ambiente];
     }
 
+    /**
+     * Retorna o schema de configuracao do Santander.
+     */
+    public static function configSchema(): ConfigSchema
+    {
+        return ConfigSchema::create('Santander')
+            ->required('clientId', 'string', 'Client ID da aplicacao no Santander Developer')
+            ->required('clientSecret', 'string', 'Client Secret da aplicacao')
+            ->requireOneOf('certificado', [
+                ['certFile', 'certKeyFile'],
+                ['certContent', 'certKeyContent'],
+            ], "Certificado mTLS obrigatorio. Informe 'certFile'+'certKeyFile' (paths) ou 'certContent'+'certKeyContent' (conteudo PEM).")
+            ->requireOneOf('tokenStorage', [
+                ['tokenStorage'],
+                ['tokenPath'],
+            ], "Armazenamento de token obrigatorio. Informe 'tokenStorage' (instancia de TokenStorageInterface) ou 'tokenPath' (diretorio).")
+            ->optional('certKeyPassword', 'string', '', 'Senha da chave privada do certificado')
+            ->optional('ambiente', 'string', 'producao', 'Ambiente: producao, sandbox, homologacao')
+            ->optional('workspaceId', 'string', '', 'ID do workspace (obrigatorio para operacoes de boleto)')
+            ->optional('tokenKey', 'string', null, 'Chave unica para armazenar o token (default: santander_token_{ambiente})')
+            ->optional('baseUrl', 'string', null, 'URL base customizada (sobrescreve ambiente)')
+            ->optional('httpClient', 'mixed', null, 'Instancia de HttpClientInterface customizada');
+    }
+
     private function validateConfig(array $config): void
     {
-        $required = ['clientId', 'clientSecret', 'certFile', 'certKeyFile'];
-
-        foreach ($required as $key) {
-            if (empty($config[$key])) {
-                throw new BoletoException("Configuracao '{$key}' e obrigatoria para o gateway Santander.");
-            }
-        }
-
-        $hasStorage = isset($config['tokenStorage']) && $config['tokenStorage'] instanceof TokenStorageInterface;
-        if (!$hasStorage && empty($config['tokenPath'])) {
-            throw new BoletoException(
-                "Configuracao 'tokenStorage' ou 'tokenPath' e obrigatoria para o gateway Santander."
-            );
-        }
+        self::configSchema()->validate($config);
     }
 }

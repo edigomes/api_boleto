@@ -3,7 +3,9 @@
 namespace ApiBoleto;
 
 use ApiBoleto\Banks\Santander\SantanderGateway;
+use ApiBoleto\Config\ConfigSchema;
 use ApiBoleto\Contracts\BoletoGatewayInterface;
+use ApiBoleto\Contracts\ConfigurableGatewayInterface;
 use ApiBoleto\Exceptions\BoletoException;
 
 class BoletoManager
@@ -56,6 +58,32 @@ class BoletoManager
     public function bancosDisponiveis(): array
     {
         return array_keys($this->bancos);
+    }
+
+    /**
+     * Retorna o schema de configuracao de um banco, se disponivel.
+     *
+     * @param string $nome Identificador do banco
+     * @return ConfigSchema|null Null se o gateway nao implementa ConfigurableGatewayInterface
+     */
+    public function configSchema(string $nome): ?ConfigSchema
+    {
+        $nome = strtolower($nome);
+
+        if (!isset($this->bancos[$nome])) {
+            throw new BoletoException(
+                "Banco '{$nome}' nao registrado. Bancos disponiveis: "
+                . implode(', ', $this->bancosDisponiveis())
+            );
+        }
+
+        $gatewayClass = $this->bancos[$nome];
+
+        if (is_subclass_of($gatewayClass, ConfigurableGatewayInterface::class)) {
+            return $gatewayClass::configSchema();
+        }
+
+        return null;
     }
 
     private function criarGateway(string $nome, array $config): BoletoGatewayInterface

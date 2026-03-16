@@ -4,6 +4,7 @@ namespace ApiBoleto\Tests\Unit;
 
 use ApiBoleto\Banks\Santander\SantanderGateway;
 use ApiBoleto\BoletoManager;
+use ApiBoleto\Config\ConfigSchema;
 use ApiBoleto\Contracts\BoletoGatewayInterface;
 use ApiBoleto\DTO\Boleto;
 use ApiBoleto\DTO\BoletoResponse;
@@ -88,6 +89,48 @@ class BoletoManagerTest extends TestCase
         $g2 = $manager->banco('fake', ['v' => '2']);
 
         $this->assertNotSame($g1, $g2);
+    }
+
+    public function testConfigSchemaSantanderRetornaSchema(): void
+    {
+        $manager = new BoletoManager();
+        $schema = $manager->configSchema('santander');
+
+        $this->assertInstanceOf(ConfigSchema::class, $schema);
+        $this->assertSame('Santander', $schema->getBanco());
+        $this->assertContains('clientId', $schema->getRequiredFields());
+        $this->assertContains('clientSecret', $schema->getRequiredFields());
+    }
+
+    public function testConfigSchemaDescreveCampos(): void
+    {
+        $manager = new BoletoManager();
+        $schema = $manager->configSchema('santander');
+        $desc = $schema->describe();
+
+        $this->assertArrayHasKey('clientId', $desc);
+        $this->assertTrue($desc['clientId']['required']);
+        $this->assertArrayHasKey('ambiente', $desc);
+        $this->assertFalse($desc['ambiente']['required']);
+        $this->assertSame('producao', $desc['ambiente']['default']);
+    }
+
+    public function testConfigSchemaBancoSemSchemaRetornaNull(): void
+    {
+        $manager = new BoletoManager();
+        $manager->registrarBanco('fake', FakeGateway::class);
+
+        $schema = $manager->configSchema('fake');
+        $this->assertNull($schema);
+    }
+
+    public function testConfigSchemaBancoInexistenteLancaException(): void
+    {
+        $this->expectException(BoletoException::class);
+        $this->expectExceptionMessage('nao registrado');
+
+        $manager = new BoletoManager();
+        $manager->configSchema('naoexiste');
     }
 }
 
