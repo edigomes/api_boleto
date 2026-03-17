@@ -80,6 +80,12 @@ $response = $gateway->criarBoleto($boleto);
 echo $response->linhaDigitavel;  // Linha digitável (bolecode)
 echo $response->codigoBarras;    // Código de barras
 echo $response->id;              // ID do boleto no banco
+
+// PIX QR Code (disponível quando a chave PIX é informada na criação)
+if ($response->qrCodePix) {
+    echo $response->qrCodePix; // Payload EMV (copia e cola)
+    echo $response->qrCodeUrl; // URL da imagem do QR Code
+}
 ```
 
 ## Operações Disponíveis
@@ -88,6 +94,35 @@ echo $response->id;              // ID do boleto no banco
 
 ```php
 $response = $gateway->criarBoleto($boleto);
+
+echo $response->id;              // ID do boleto no banco
+echo $response->nossoNumero;     // Nosso número
+echo $response->codigoBarras;    // Código de barras
+echo $response->linhaDigitavel;  // Linha digitável (bolecode)
+echo $response->status;          // Status (ex: OPEN)
+echo $response->valor;           // Valor nominal
+echo $response->vencimento;      // Data de vencimento
+echo $response->urlPdf;          // URL do PDF (se retornada na criação)
+
+// PIX QR Code — preenchido quando a chave PIX é enviada na criação
+if ($response->qrCodePix) {
+    echo $response->qrCodePix; // Payload EMV "copia e cola"
+    echo $response->qrCodeUrl; // URL da imagem do QR Code
+}
+```
+
+Para incluir PIX QR Code no boleto, passe a chave PIX em `dadosExtras` ao criar:
+
+```php
+$boleto = Boleto::fromArray([
+    // ... campos padrão ...
+    'dadosExtras' => [
+        'key' => [
+            'type'    => 'CNPJ',        // CPF, CNPJ, EMAIL, EVP (chave aleatória), PHONE
+            'dictKey' => '12345678000100',
+        ],
+    ],
+]);
 ```
 
 ### Consultar Boleto
@@ -155,6 +190,26 @@ $pdfBinario = $gateway->downloadPdf($identificadorPdf, '12345678900');
 file_put_contents('boleto.pdf', $pdfBinario);
 ```
 
+## Campos do BoletoResponse
+
+Todos os métodos que retornam um `BoletoResponse` preenchem os seguintes campos:
+
+| Campo            | Tipo   | Descrição                                                           |
+|------------------|--------|---------------------------------------------------------------------|
+| `id`             | string | Identificador do boleto retornado pelo banco                        |
+| `nossoNumero`    | string | Nosso número atribuído pelo banco                                   |
+| `codigoBarras`   | string | Código de barras (bolecode)                                         |
+| `linhaDigitavel` | string | Linha digitável (bolecode)                                          |
+| `status`         | string | Status do boleto no banco (ex: `OPEN`, `LIQUIDADO`)                 |
+| `valor`          | string | Valor nominal do boleto                                             |
+| `vencimento`     | string | Data de vencimento (YYYY-MM-DD)                                     |
+| `urlPdf`         | string | URL do PDF, quando retornada pelo banco na criação/consulta         |
+| `qrCodePix`      | string | Payload EMV do QR Code PIX ("copia e cola") — quando disponível     |
+| `qrCodeUrl`      | string | URL da imagem do QR Code PIX — quando disponível                    |
+| `dadosOriginais` | array  | Resposta bruta da API do banco (útil para campos não mapeados)      |
+
+> `qrCodePix` e `qrCodeUrl` são preenchidos automaticamente quando a API do banco retorna dados PIX. No Santander, isso ocorre quando a `key` é enviada em `dadosExtras` na criação do boleto.
+
 ## Campos do InstrucaoBoleto
 
 O `InstrucaoBoleto` é o DTO genérico usado para alterar e cancelar boletos em qualquer banco. Preencha apenas os campos que deseja alterar — campos vazios/null são ignorados.
@@ -220,9 +275,12 @@ $boleto = Boleto::fromArray([
     'vencimento' => '2026-04-15',
     // ... campos padrão ...
     'dadosExtras' => [
-        'paymentType' => 'REGISTRO',
-        'key'         => ['dictType' => 'EVP', 'value' => 'chave-pix-uuid'],
-        'txId'        => 'tx123abc',
+        // PIX QR Code: informe a chave PIX do beneficiário
+        // Tipos aceitos: CPF, CNPJ, EMAIL, EVP (chave aleatória), PHONE
+        'key' => [
+            'type'    => 'CNPJ',
+            'dictKey' => '12345678000100',
+        ],
     ],
 ]);
 

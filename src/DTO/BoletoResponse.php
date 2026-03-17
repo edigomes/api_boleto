@@ -28,6 +28,12 @@ class BoletoResponse
     /** @var string URL ou path do PDF, se disponivel */
     public string $urlPdf;
 
+    /** @var string Payload do QR Code PIX (copia e cola), quando disponivel */
+    public string $qrCodePix;
+
+    /** @var string URL da imagem do QR Code PIX, quando disponivel */
+    public string $qrCodeUrl;
+
     /** @var array Dados originais retornados pela API do banco */
     public array $dadosOriginais;
 
@@ -41,6 +47,8 @@ class BoletoResponse
         $this->valor = '';
         $this->vencimento = '';
         $this->urlPdf = '';
+        $this->qrCodePix = '';
+        $this->qrCodeUrl = '';
         $this->dadosOriginais = [];
     }
 
@@ -56,6 +64,8 @@ class BoletoResponse
         $response->valor = (string)($data['valor'] ?? '');
         $response->vencimento = (string)($data['vencimento'] ?? '');
         $response->urlPdf = (string)($data['urlPdf'] ?? '');
+        $response->qrCodePix = (string)($data['qrCodePix'] ?? '');
+        $response->qrCodeUrl = (string)($data['qrCodeUrl'] ?? '');
         $response->dadosOriginais = $data['dadosOriginais'] ?? [];
 
         return $response;
@@ -64,14 +74,16 @@ class BoletoResponse
     public function toArray(): array
     {
         return [
-            'id' => $this->id,
-            'nossoNumero' => $this->nossoNumero,
-            'codigoBarras' => $this->codigoBarras,
+            'id'             => $this->id,
+            'nossoNumero'    => $this->nossoNumero,
+            'codigoBarras'   => $this->codigoBarras,
             'linhaDigitavel' => $this->linhaDigitavel,
-            'status' => $this->status,
-            'valor' => $this->valor,
-            'vencimento' => $this->vencimento,
-            'urlPdf' => $this->urlPdf,
+            'status'         => $this->status,
+            'valor'          => $this->valor,
+            'vencimento'     => $this->vencimento,
+            'urlPdf'         => $this->urlPdf,
+            'qrCodePix'      => $this->qrCodePix,
+            'qrCodeUrl'      => $this->qrCodeUrl,
             'dadosOriginais' => $this->dadosOriginais,
         ];
     }

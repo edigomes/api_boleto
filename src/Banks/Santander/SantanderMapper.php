@@ -99,6 +99,8 @@ class SantanderMapper
         $response->valor = (string) ($apiData['nominalValue'] ?? $apiData['entryValue'] ?? $apiData['totalValue'] ?? '');
         $response->vencimento = (string) ($apiData['dueDate'] ?? '');
         $response->urlPdf = (string) ($apiData['pdfUrl'] ?? $apiData['pdfLink'] ?? '');
+        $response->qrCodePix = (string) ($apiData['qrCodePix'] ?? $apiData['emvqrcps'] ?? $apiData['pixQrCode'] ?? '');
+        $response->qrCodeUrl = (string) ($apiData['qrCodeUrl'] ?? $apiData['qrCodeImageUrl'] ?? $apiData['pixQrCodeUrl'] ?? '');
         $response->dadosOriginais = $apiData;
 
         return $response;
