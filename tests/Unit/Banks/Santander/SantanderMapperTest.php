@@ -65,7 +65,108 @@ class SantanderMapperTest extends TestCase
         $this->assertSame('Empresa', $payload['beneficiary']['name']);
         $this->assertSame('CNPJ', $payload['beneficiary']['documentType']);
 
+        $this->assertSame('REGISTRO', $payload['paymentType']);
         $this->assertArrayNotHasKey('participantCode', $payload);
+    }
+
+    public function testNormalizaCepSemTraco(): void
+    {
+        $boleto = Boleto::fromArray([
+            'valor'        => '100.00',
+            'vencimento'   => '2026-05-01',
+            'emissao'      => '2026-03-12',
+            'pagador'      => [
+                'nome' => 'Joao',
+                'documento' => '111',
+                'cep' => '01310100',
+            ],
+            'beneficiario' => ['nome' => 'Empresa', 'documento' => '222'],
+        ]);
+
+        $payload = $this->mapper->toApiPayload($boleto);
+
+        $this->assertSame('01310-100', $payload['payer']['zipCode']);
+    }
+
+    public function testCepJaFormatadoNaoAltera(): void
+    {
+        $boleto = Boleto::fromArray([
+            'valor'        => '100.00',
+            'vencimento'   => '2026-05-01',
+            'emissao'      => '2026-03-12',
+            'pagador'      => [
+                'nome' => 'Joao',
+                'documento' => '111',
+                'cep' => '01310-100',
+            ],
+            'beneficiario' => ['nome' => 'Empresa', 'documento' => '222'],
+        ]);
+
+        $payload = $this->mapper->toApiPayload($boleto);
+
+        $this->assertSame('01310-100', $payload['payer']['zipCode']);
+    }
+
+    public function testTipoDocumentoVazioUsaDuplicataMercantil(): void
+    {
+        $boleto = Boleto::fromArray([
+            'valor'        => '100.00',
+            'vencimento'   => '2026-05-01',
+            'emissao'      => '2026-03-12',
+            'pagador'      => ['nome' => 'Joao', 'documento' => '111'],
+            'beneficiario' => ['nome' => 'Empresa', 'documento' => '222'],
+        ]);
+
+        $payload = $this->mapper->toApiPayload($boleto);
+
+        $this->assertSame('DUPLICATA_MERCANTIL', $payload['documentKind']);
+    }
+
+    public function testTipoDocumentoExplicitoNaoSobrescreve(): void
+    {
+        $boleto = Boleto::fromArray([
+            'valor'          => '100.00',
+            'vencimento'     => '2026-05-01',
+            'emissao'        => '2026-03-12',
+            'tipoDocumento'  => 'RECIBO',
+            'pagador'        => ['nome' => 'Joao', 'documento' => '111'],
+            'beneficiario'   => ['nome' => 'Empresa', 'documento' => '222'],
+        ]);
+
+        $payload = $this->mapper->toApiPayload($boleto);
+
+        $this->assertSame('RECIBO', $payload['documentKind']);
+    }
+
+    public function testPaymentTypeDefaultRegistro(): void
+    {
+        $boleto = Boleto::fromArray([
+            'valor'        => '100.00',
+            'vencimento'   => '2026-05-01',
+            'emissao'      => '2026-03-12',
+            'pagador'      => ['nome' => 'Joao', 'documento' => '111'],
+            'beneficiario' => ['nome' => 'Empresa', 'documento' => '222'],
+        ]);
+
+        $payload = $this->mapper->toApiPayload($boleto);
+
+        $this->assertSame('REGISTRO', $payload['paymentType']);
+    }
+
+    public function testPaymentTypePodeSobrescreverViaDadosExtras(): void
+    {
+        $boleto = Boleto::fromArray([
+            'valor'        => '100.00',
+            'vencimento'   => '2026-05-01',
+            'emissao'      => '2026-03-12',
+            'pagador'      => ['nome' => 'Joao', 'documento' => '111'],
+            'beneficiario' => ['nome' => 'Empresa', 'documento' => '222'],
+            'dadosExtras'  => ['paymentType' => 'PARCELADO'],
+        ]);
+
+        $payload = $this->mapper->toApiPayload($boleto);
+
+        $this->assertSame('PARCELADO', $payload['paymentType']);
     }
 
     public function testToApiPayloadDadosExtrasSobrescrevemCampos(): void

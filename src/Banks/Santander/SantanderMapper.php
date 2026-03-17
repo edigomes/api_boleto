@@ -72,6 +72,8 @@ class SantanderMapper
             $payload['messages'] = $boleto->mensagens;
         }
 
+        $payload['paymentType'] = 'REGISTRO';
+
         $this->applyDadosExtras($payload, $boleto);
 
         return $payload;
@@ -298,8 +300,23 @@ class SantanderMapper
             'neighborhood' => $pagador->bairro,
             'city' => $pagador->cidade,
             'state' => $pagador->estado,
-            'zipCode' => $pagador->cep,
+            'zipCode' => $this->normalizeCep($pagador->cep),
         ];
+    }
+
+    /**
+     * Normaliza o CEP para o formato esperado pelo Santander: 99999-999.
+     * Aceita tanto "99999999" quanto "99999-999".
+     */
+    private function normalizeCep(string $cep): string
+    {
+        $digits = preg_replace('/\D/', '', $cep);
+
+        if (strlen($digits) === 8) {
+            return substr($digits, 0, 5) . '-' . substr($digits, 5);
+        }
+
+        return $cep;
     }
 
     private function mapBeneficiario(Boleto $boleto): array
@@ -393,11 +410,15 @@ class SantanderMapper
     {
         $map = [
             'DUPLICATA_MERCANTIL' => 'DUPLICATA_MERCANTIL',
-            'NOTA_PROMISSORIA' => 'NOTA_PROMISSORIA',
-            'RECIBO' => 'RECIBO',
-            'FATURA' => 'FATURA',
-            'OUTROS' => 'OUTROS',
+            'NOTA_PROMISSORIA'    => 'NOTA_PROMISSORIA',
+            'RECIBO'              => 'RECIBO',
+            'FATURA'              => 'FATURA',
+            'OUTROS'              => 'OUTROS',
         ];
+
+        if (empty($tipo)) {
+            return 'DUPLICATA_MERCANTIL';
+        }
 
         return $map[$tipo] ?? $tipo;
     }
