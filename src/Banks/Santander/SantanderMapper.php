@@ -146,8 +146,11 @@ class SantanderMapper
 
         if (!empty($instrucao->operacao)) {
             $payload['operation'] = $instrucao->operacao;
-        } elseif (empty($payload['operation'])) {
-            $payload['operation'] = $this->inferOperation($instrucao);
+        } else {
+            $inferred = $this->inferOperation($instrucao);
+            if ($inferred !== '') {
+                $payload['operation'] = $inferred;
+            }
         }
 
         foreach ($instrucao->dadosExtras as $key => $value) {
