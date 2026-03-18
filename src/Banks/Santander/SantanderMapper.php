@@ -243,35 +243,17 @@ class SantanderMapper
 
     /**
      * Infere a operacao com base nos campos preenchidos da instrucao.
+     * Na API V2 do Santander, o campo 'operation' so aceita PROTESTAR, BAIXAR e CANCELAR_PROTESTO.
+     * Alteracoes de valor, vencimento ou descontos nao usam esse campo.
      */
     private function inferOperation(InstrucaoBoleto $instrucao): string
     {
-        if ($instrucao->vencimento !== '') {
-            return 'ALTER_DUE_DATE';
-        }
-
-        if ($instrucao->valor !== '') {
-            return 'ALTER_NOMINAL_VALUE';
-        }
-
-        if ($instrucao->desconto !== null) {
-            return 'ALTER_DISCOUNT';
-        }
-
-        if ($instrucao->percentualMulta !== '') {
-            return 'ALTER_FINE';
-        }
-
         if ($instrucao->diasProtesto > 0) {
-            return 'ALTER_PROTEST';
+            return 'PROTESTAR';
         }
 
         if ($instrucao->diasBaixa > 0) {
-            return 'ALTER_WRITE_OFF';
-        }
-
-        if ($instrucao->valorDeducao !== '') {
-            return 'ALTER_DEDUCTION';
+            return 'BAIXAR';
         }
 
         return '';
