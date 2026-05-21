@@ -28,6 +28,9 @@ class BoletoResponse
     /** @var string URL ou path do PDF, se disponivel */
     public string $urlPdf;
 
+    /** @var string Conteudo PDF/HTML em Base64, quando retornado pelo banco */
+    public string $pdfBase64;
+
     /** @var string Payload do QR Code PIX (copia e cola), quando disponivel */
     public string $qrCodePix;
 
@@ -47,6 +50,7 @@ class BoletoResponse
         $this->valor = '';
         $this->vencimento = '';
         $this->urlPdf = '';
+        $this->pdfBase64 = '';
         $this->qrCodePix = '';
         $this->qrCodeUrl = '';
         $this->dadosOriginais = [];
@@ -64,6 +68,7 @@ class BoletoResponse
         $response->valor = (string)($data['valor'] ?? '');
         $response->vencimento = (string)($data['vencimento'] ?? '');
         $response->urlPdf = (string)($data['urlPdf'] ?? '');
+        $response->pdfBase64 = (string)($data['pdfBase64'] ?? '');
         $response->qrCodePix = (string)($data['qrCodePix'] ?? '');
         $response->qrCodeUrl = (string)($data['qrCodeUrl'] ?? '');
         $response->dadosOriginais = $data['dadosOriginais'] ?? [];
@@ -82,6 +87,7 @@ class BoletoResponse
             'valor'          => $this->valor,
             'vencimento'     => $this->vencimento,
             'urlPdf'         => $this->urlPdf,
+            'pdfBase64'      => $this->pdfBase64,
             'qrCodePix'      => $this->qrCodePix,
             'qrCodeUrl'      => $this->qrCodeUrl,
             'dadosOriginais' => $this->dadosOriginais,

@@ -26,6 +26,7 @@ composer install
 | Banco      | Status       |
 |------------|--------------|
 | Santander  | Implementado |
+| Itau       | Implementado |
 
 ## Uso Rápido
 
@@ -204,6 +205,7 @@ Todos os métodos que retornam um `BoletoResponse` preenchem os seguintes campos
 | `valor`          | string | Valor nominal do boleto                                             |
 | `vencimento`     | string | Data de vencimento (YYYY-MM-DD)                                     |
 | `urlPdf`         | string | URL do PDF, quando retornada pelo banco na criação/consulta         |
+| `pdfBase64`      | string | PDF/HTML em Base64, quando retornado pelo banco                     |
 | `qrCodePix`      | string | Payload EMV do QR Code PIX ("copia e cola") — quando disponível     |
 | `qrCodeUrl`      | string | URL da imagem do QR Code PIX — quando disponível                    |
 | `dadosOriginais` | array  | Resposta bruta da API do banco (útil para campos não mapeados)      |
@@ -392,6 +394,350 @@ $workspaces = $gateway->listarWorkspaces();
 $workspace = $gateway->consultarWorkspace('workspace-id');
 ```
 
+## Itau - Certificados e Producao
+
+Esta secao e o checklist pratico para o agente que vai implementar o Itau no ERP.
+
+### O que a lib precisa
+
+Para criar, consultar ou alterar boletos no Itau, configure um gateway por cliente/tenant com:
+
+- `clientId`: credencial da aplicacao no Itau.
+- `clientSecret`: segredo da aplicacao no Itau.
+- `idBeneficiario`: identificador do beneficiario/conta usado nas APIs de cobranca.
+- `certFile` + `certKeyFile`: certificado cliente e chave privada em arquivos, ou `certContent` + `certKeyContent` quando vierem de S3, banco, vault etc.
+- `certKeyPassword`: senha da chave privada, quando houver.
+- `tokenStorage` ou `tokenPath`: cache do token OAuth.
+- `tokenKey`: chave unica por cliente/tenant. Em ERP multi-cliente, nao reutilize a mesma chave para clientes diferentes.
+
+Exemplo de configuracao por tenant:
+
+```php
+use ApiBoleto\BoletoManager;
+use ApiBoleto\Contracts\TokenStorageInterface;
+
+$manager = new BoletoManager();
+
+$gateway = $manager->banco('itau', [
+    'clientId'        => $tenant->itau_client_id,
+    'clientSecret'    => $tenant->itau_client_secret,
+    'idBeneficiario'  => $tenant->itau_id_beneficiario,
+    'certFile'        => $tenant->itau_cert_path,
+    'certKeyFile'     => $tenant->itau_key_path,
+    'certKeyPassword' => $tenant->itau_key_password ?: '',
+    'tokenStorage'    => app(TokenStorageInterface::class),
+    'tokenKey'        => "itau_{$tenant->id}_{$tenant->itau_id_beneficiario}_producao",
+    'ambiente'        => 'producao',
+    'codigoCarteira'  => $tenant->itau_codigo_carteira ?: '109',
+    'codigoEspecie'   => $tenant->itau_codigo_especie ?: '01',
+    'tipoBoleto'      => 'a vista',
+
+    // Use validacao/simulacao nos primeiros testes. Troque para efetivacao
+    // somente quando o cliente estiver pronto para emitir em producao.
+    'etapaProcesso'   => 'validacao',
+]);
+```
+
+Para Bolecode Pix, tambem informe `pixBaseUrl` com a base da API de Pix contratada/liberada pelo Itau:
+
+```php
+'pixBaseUrl' => 'https://.../recebimentos-pix/v1',
+```
+
+Se a especificacao recebida for a colecao `API - Bolecode.postman_collection`, use o formato dela:
+
+```php
+'pixBaseUrl'        => 'https://secure.api.itau/pix_recebimentos_conciliacoes/v2',
+'pixEndpointPath'   => '/boletos_pix',
+'pixLegacyPayload'  => true,
+'etapaProcesso'     => 'Simulacao',
+```
+
+O Bolecode fica intencionalmente separado do boleto comum. Enquanto o cliente nao tiver a API `Bolecode Pix / recebimentos-pix/v1` liberada, use apenas o fluxo normal de boleto. Quando o Itau liberar, o ERP nao precisa mudar a emissao comum: basta enviar `dadosExtras['bolecodePix'] = true`, `dadosExtras['chavePix']` e configurar `pixBaseUrl`.
+
+### PDF no Itau
+
+Pelas APIs liberadas neste cliente, nao ha endpoint de PDF/impressao pronto:
+
+- `API Emissao, Instrucao e Consulta de boletos` (`cash_management/v2`) emite, consulta e instrui boletos, mas retorna dados de impressao (`numero_linha_digitavel`, `codigo_barras`, beneficiario, pagador, vencimento e valor).
+- `API Boletos (v3) - Francesa e Webhook` consulta francesas/movimentacoes e cadastra webhooks; ela nao gera PDF de boleto.
+- A especificacao `API Boletos v1` tem campo `base64` descrito como PDF/HTML, mas esta rota precisa estar explicitamente liberada no contrato/credencial. Para este cliente, o POST nessa rota retornou `403 explicit deny`, entao nao e a rota contratada agora.
+
+Por isso a lib usa o retorno oficial se o banco trouxer `urlPdf` ou `pdfBase64`; caso contrario, gera PDF localmente seguindo o layout Febraban/Itau da ficha de compensacao:
+
+```php
+$pdfBinario = $gateway->downloadPdf('123400123451,109,43977574');
+file_put_contents('boleto_itau.pdf', $pdfBinario);
+```
+
+Se voce acabou de criar o boleto e ja tem o `BoletoResponse`, tambem pode renderizar direto, sem consultar de novo:
+
+```php
+use ApiBoleto\Pdf\BoletoPdfRenderer;
+
+$response = $gateway->criarBoleto($boleto);
+
+$pdfBinario = (new BoletoPdfRenderer())->render($response, [
+    'bankName' => 'Banco Itau S.A.',
+    'bankCode' => '341',
+]);
+
+file_put_contents('boleto_itau.pdf', $pdfBinario);
+```
+
+Logos do renderer interno ficam em `resources/logos/banks/`. O Itau usa `resources/logos/banks/itau.png` automaticamente quando `bankCode` for `341`. Para outro banco, adicione o PNG nessa pasta seguindo o mapa interno do renderer ou informe manualmente:
+
+```php
+$pdfBinario = (new BoletoPdfRenderer())->render($response, [
+    'bankCode' => '341',
+    'logoPath' => __DIR__ . '/../resources/logos/banks/itau.png',
+]);
+```
+
+Se quiser desabilitar logo e renderizar apenas texto no cabecalho, use `'logoPath' => false`.
+
+No exemplo `examples/itau_sample.php`, defina `ITAU_OUTPUT_PDF` para salvar o PDF junto com o teste.
+
+Sobre QR Code: boleto comum nao tem QR Code. QR aparece apenas em Bolecode Pix, quando a API Pix/Bolecode retornar dados de QR (`dados_qrcode.base64`, `emv`, `location`). O renderizador local inclui a imagem quando o Itau devolve `dados_qrcode.base64`.
+
+### Mapa das APIs Itau
+
+Os arquivos de especificacao do Itau parecem sobrepor nomes, mas na pratica ficam assim:
+
+| Spec/local | Base URL | Uso na lib |
+|------------|----------|------------|
+| `API Boletos - Emissao e Instrucao` / `cash_management/v2` | `https://api.itau.com.br/cash_management/v2` | Emissao de boleto comum e instrucoes: baixa, vencimento, valor, juros, multa, desconto etc. |
+| `boletoscash/v2` do email de boas-vindas | `https://secure.api.cloud.itau.com.br/boletoscash/v2` | Consulta liberada para este cliente. A rota `GET /boletos` em `cash_management/v2` pode existir na spec, mas pode retornar 403 se nao estiver liberada na credencial. |
+| `Bolecode Pix` / `recebimentos-pix/v1` ou `pix_recebimentos_conciliacoes/v2/boletos_pix` | URL Pix informada pelo Itau | Emissao de boleto + Pix, quando o produto Pix estiver contratado/liberado. Na colecao `API - Bolecode`, configure `pixEndpointPath=/boletos_pix` e `pixLegacyPayload=true`. |
+| `API Boletos (v3)` / Francesa e Webhook | `https://boletos.cloud.itau.com.br/boletos/v3` | Webhooks/notificacoes e consultas de francesa/movimentacoes. Nao emite boleto e nao gera PDF. |
+| `API Boletos v1` | `https://boleto.../boleto/v1` | Pode retornar `base64` (PDF/HTML) em alguns contratos. Use somente se o Itau liberar explicitamente esta API para o cliente. |
+
+O `idBeneficiario` normalmente vem da agencia/conta liberada pelo Itau:
+
+```text
+Agencia/conta: 1234/12345-1
+idBeneficiario: 123400123451
+Formato: agencia(4) + 00 + conta(5) + dac(1)
+```
+
+### Webhook Itau
+
+A lib implementa o cadastro de webhook da `API Boletos (v3)` pelo mesmo contrato de setup usado pelos bancos configuraveis.
+
+Antes de chamar o setup, o ERP precisa ter:
+
+- Uma URL HTTPS publica para receber notificacoes, ex: `https://erp.exemplo.com/webhooks/itau/boletos`.
+- Um endpoint OAuth proprio do ERP, ex: `https://erp.exemplo.com/oauth/token`.
+- Um `client_id`, `client_secret` e, se usado, `scope` aceitos por esse OAuth do ERP.
+- Persistencia do payload bruto recebido, para idempotencia e auditoria.
+
+Fluxo do webhook Itau:
+
+1. O ERP chama `$gateway->setup(...)` para cadastrar a URL no Itau.
+2. Quando houver uma movimentacao, o Itau chama o `webhookOauthUrl` do ERP usando `webhookClientId` e `webhookClientSecret`.
+3. O ERP devolve um token.
+4. O Itau chama `webhookUrl` com a notificacao do boleto.
+5. O ERP processa a notificacao e, se precisar de detalhe/conciliacao, consulta o boleto ou as movimentacoes/francesas.
+
+Setup:
+
+```php
+$result = $gateway->setup([
+    'webhookUrl' => 'https://erp.exemplo.com/webhooks/itau/boletos',
+    'webhookClientId' => 'client-do-erp',
+    'webhookClientSecret' => 'secret-do-erp',
+    'webhookOauthUrl' => 'https://erp.exemplo.com/oauth/token',
+    'webhookOauthScope' => 'boletos-notificacoes',
+    'tiposNotificacoes' => ['BAIXA_EFETIVA', 'BAIXA_OPERACIONAL'],
+    'valorMinimo' => 0.01,
+]);
+```
+
+Tipos de notificacao comuns:
+
+- `BAIXA_EFETIVA`
+- `BAIXA_OPERACIONAL`
+
+Operacoes auxiliares:
+
+```php
+$gateway->consultarSetup();        // lista webhooks do id_beneficiario
+$gateway->consultarSetup($id);     // consulta um webhook
+$gateway->atualizarSetup($id, ['data' => [...]]); // atualiza cadastro
+$gateway->excluirWebhook($id);     // remove cadastro
+```
+
+O exemplo `examples/itau_webhook_setup.php` mostra o uso por variaveis de ambiente para o ERP.
+
+Principais diferencas para o Santander:
+
+| Item | Santander | Itau |
+|------|-----------|------|
+| O que o `setup()` cria | Workspace de cobranca com convenio e flags de webhook | Cadastro de notificacao em `/boletos/v3/notificacoes_boletos` |
+| Campo principal | `covenantCode`, `webhookUrl`, `boleto_webhook`, `pix_webhook` | `idBeneficiario`, `webhookUrl`, `webhookClientId`, `webhookClientSecret`, `webhookOauthUrl` |
+| OAuth para receber webhook | Nao e configurado no setup da lib | Obrigatorio: o ERP fornece endpoint OAuth para o Itau buscar token |
+| Boleto e Pix | Flags separadas no workspace (`bankSlipBillingWebhookActive`, `pixBillingWebhookActive`) | Esta API v3 cobre notificacoes de boletos; Bolecode/Pix depende da API Pix liberada |
+| Alterar cadastro | `atualizarSetup($workspaceId, ...)` | `atualizarSetup($idNotificacao, ['data' => ...])` |
+| Remover cadastro | Remocao/gestao de workspace Santander | `excluirWebhook($idNotificacao)` |
+
+Para o agente do ERP: reaproveite a interface `setup()`, mas trate o Itau como cadastro de notificacao e nao como criacao de workspace. Tambem implemente o OAuth inbound do ERP antes de cadastrar o webhook no Itau.
+
+### Consulta, PDF depois, alteracao e baixa
+
+Em `validacao`, o Itau devolve linha digitavel/codigo de barras, mas nao necessariamente grava o boleto para consulta posterior. Para consultar depois, emita em `efetivacao`.
+
+Consulta por nosso numero usando o `idBeneficiario` e carteira da configuracao:
+
+```php
+$boleto = $gateway->consultarBoleto('37734327');
+```
+
+Consulta explicitando beneficiario, carteira, nosso numero e, opcionalmente, data de inclusao:
+
+```php
+$boleto = $gateway->consultarBoleto('123400123451,109,37734327,2026-05-20');
+```
+
+Listagem/consulta por filtros:
+
+```php
+$boletos = $gateway->consultarBoletos([
+    'idBeneficiario' => '123400123451',
+    'codigoCarteira' => '109',
+    'nossoNumero' => '37734327',
+    'dataInclusao' => '2026-05-20',
+    'view' => 'specific',
+]);
+```
+
+Gerar PDF depois da consulta:
+
+```php
+$pdf = $gateway->downloadPdf('123400123451,109,37734327,2026-05-20');
+file_put_contents('boleto_itau.pdf', $pdf);
+```
+
+Para instrucoes, o Itau usa `id_boleto` no path. A lib aceita estes formatos:
+
+- `12340012345110937734327` (`idBeneficiario + carteira + nossoNumero`)
+- `123400123451,109,37734327`
+- `37734327` (usa `idBeneficiario` e `codigoCarteira` da configuracao)
+
+Alterar vencimento:
+
+```php
+use ApiBoleto\DTO\InstrucaoBoleto;
+
+$response = $gateway->alterarBoleto(
+    '123400123451,109,37734327',
+    InstrucaoBoleto::alterarVencimento('2026-07-10')
+);
+```
+
+Alterar valor nominal:
+
+```php
+$response = $gateway->alterarBoleto(
+    '123400123451,109,37734327',
+    InstrucaoBoleto::alterarValor('120.00')
+);
+```
+
+Baixar/cancelar boleto:
+
+```php
+$ok = $gateway->cancelarBoleto('123400123451,109,37734327');
+```
+
+Observacao operacional: o Itau pode recusar baixa no mesmo dia da inclusao do titulo com a mensagem `Atualizacao nao permitida na mesma data de inclusao do titulo`. Nesse caso, tente novamente no dia util seguinte.
+
+### Francesa e movimentacoes v3
+
+Essas consultas usam a API `Boletos (v3) - Francesa e Webhook` liberada no email. Elas servem para posicao/conciliacao, nao para gerar boleto ou PDF.
+
+```php
+$francesas = $gateway->consultarFrancesas([
+    'mesReferencia' => '052026', // mmyyyy
+]);
+
+$movimentacoes = $gateway->consultarMovimentacoesFrancesa('123400123451', [
+    'data' => '2026-05-21',
+    'nossoNumero' => '37734327',
+    'tipoCobranca' => 'boleto',
+]);
+
+$resumo = $gateway->consultarMovimentacoesResumidasFrancesa('123400123451', [
+    'data' => '2026-05-21',
+]);
+```
+
+### Qual certificado usar em producao
+
+Existem dois cenarios.
+
+**1. O cliente ja tem um `.pfx` aceito pelo Itau**
+
+Use o `.pfx` do cliente. Nesse caso nao precisa gerar CSR nem esperar o Itau emitir outro certificado. Extraia uma vez:
+
+- certificado publico/client certificate: `cliente_itau.crt`
+- chave privada: `cliente_itau.key`
+- senha da chave, se a chave ficar protegida
+
+Depois configure a lib com `certFile`, `certKeyFile` e `certKeyPassword`.
+
+Importante: um `.pfx` vindo direto da Certisign/e-CNPJ so resolve se ele ja estiver cadastrado, vinculado ou aceito pelo Itau para a aplicacao/cliente usado no `clientId`. Se o Itau ainda nao reconhece aquele certificado para a API, apenas ter o `.pfx` nao basta.
+
+Comandos para extrair no Windows:
+
+```powershell
+$openssl = "C:\Program Files\Git\mingw64\bin\openssl.exe"
+$pfx = "C:\certs\cliente.pfx"
+$cert = "C:\certs\cliente_itau.crt"
+$key = "C:\certs\cliente_itau.key"
+$env:PFX_PASS = (Get-Content -Raw "C:\certs\senha_pfx.txt").Trim()
+
+& $openssl pkcs12 -legacy -in $pfx -clcerts -nokeys -out $cert -passin env:PFX_PASS
+& $openssl pkcs12 -legacy -in $pfx -nocerts -out $key -passin env:PFX_PASS -passout env:PFX_PASS
+
+Remove-Item Env:\PFX_PASS -ErrorAction SilentlyContinue
+```
+
+O `-legacy` e necessario quando o PFX usa cifra antiga.
+
+**2. O cliente/app ainda nao tem certificado aceito pelo Itau**
+
+Nesse caso o par chave/certificado precisa ser criado para o processo do Itau:
+
+1. Gere a chave privada localmente.
+2. Gere o CSR a partir dessa chave.
+3. Envie o CSR para o Itau pelo fluxo indicado por eles, normalmente usando o token/chave temporaria enviada por email.
+4. O Itau devolve ou libera o certificado `.crt`.
+5. Use o `.crt` do Itau junto com a `.key` que voce gerou localmente.
+
+O Itau nao deve gerar a sua chave privada. A chave privada fica com o cliente/ERP. O que o Itau envia por email costuma ser um token/chave temporaria para autorizar ou localizar o pedido de certificado, nao a chave privada usada no mTLS.
+
+Exemplo de CSR:
+
+```powershell
+$openssl = "C:\Program Files\Git\mingw64\bin\openssl.exe"
+
+& $openssl req -new -newkey rsa:2048 -nodes -sha512 `
+  -keyout "cliente_itau.key" `
+  -out "cliente_itau.csr" `
+  -subj "/CN=CLIENT_ID/OU=NOME_DA_EMPRESA/L=CIDADE/ST=UF/C=BR"
+```
+
+Se a chave for gerada sem senha por causa do `-nodes`, proteja o arquivo com permissao do sistema operacional ou regrave a chave com senha antes de colocar em producao.
+
+### Regras para o ERP
+
+- Nunca commite `.pfx`, `.p12`, `.key`, `.crt`, senhas, planilhas `Token.xlsx`, tokens OAuth ou dumps de credenciais.
+- Armazene certificado, chave e senha por cliente/tenant em local seguro: vault, S3 privado com KMS, banco criptografado ou pasta fora do webroot com permissao restrita.
+- Use `tokenKey` unico por cliente/tenant e ambiente, por exemplo `itau_123_456789_producao`.
+- Comece os testes com `etapaProcesso => 'validacao'` ou `simulacao`; use `efetivacao` somente para emitir de verdade.
+- Para boleto com Pix, alem da chave Pix no DTO, configure `pixBaseUrl`.
+- Os certificados locais gerados para este cliente ficam documentados em `utils/Itau/README_CERTIFICADOS.md` e estao ignorados pelo Git.
+
 ## Schema de Configuração
 
 Cada banco define um `ConfigSchema` que descreve e valida seus campos de configuração. Isso permite consultar programaticamente quais campos são necessários antes de instanciar o gateway.
@@ -549,6 +895,11 @@ Veja a pasta `examples/` para exemplos completos:
 | `santander_baixar.php`      | Cancelamento (baixa)               |
 | `santander_pdf.php`         | Geração e download de PDF          |
 | `santander_config.php`      | Configuração compartilhada         |
+| `itau_sample.php`           | Criação de boleto Itau             |
+| `itau_bolecode_pix.php`     | Criação de Bolecode Pix Itau       |
+| `itau_francesas.php`        | Consulta Francesa/movimentacoes v3 |
+| `itau_boleto_v1_official_pdf.php` | Teste opcional de `base64` oficial, somente se a API v1 estiver liberada |
+| `itau_config.php`           | Configuração compartilhada Itau    |
 
 ## Licença
 

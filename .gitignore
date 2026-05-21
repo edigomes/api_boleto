@@ -1,1 +1,16 @@
 examples
+.phpunit.result.cache
+webhooks/
+
+# Itau credentials/certificates
+utils/Itau/*.pfx
+utils/Itau/*.p12
+utils/Itau/*.key
+utils/Itau/*.crt
+utils/Itau/*.token
+utils/Itau/itau_token*
+utils/Itau/*pass*.txt
+utils/Itau/*senha*.txt
+utils/Itau/*secret*.txt
+utils/Itau/Token.xlsx
+utils/Itau/certs/

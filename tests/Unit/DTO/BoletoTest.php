@@ -182,6 +182,7 @@ class BoletoTest extends TestCase
             'valor'          => '100.00',
             'vencimento'     => '2026-04-15',
             'urlPdf'         => 'https://example.com/boleto.pdf',
+            'pdfBase64'      => 'JVBERi0xLjQ=',
             'qrCodePix'      => '00020126580014BR.GOV.BCB.PIX',
             'qrCodeUrl'      => 'https://example.com/qrcode.png',
             'dadosOriginais' => ['extra' => true],
@@ -193,6 +194,7 @@ class BoletoTest extends TestCase
         $this->assertSame('N999', $response->nossoNumero);
         $this->assertSame('OPEN', $response->status);
         $this->assertSame('100.00', $response->valor);
+        $this->assertSame('JVBERi0xLjQ=', $response->pdfBase64);
         $this->assertSame('00020126580014BR.GOV.BCB.PIX', $response->qrCodePix);
         $this->assertSame('https://example.com/qrcode.png', $response->qrCodeUrl);
         $this->assertSame(['extra' => true], $response->dadosOriginais);
@@ -207,16 +209,19 @@ class BoletoTest extends TestCase
 
         $this->assertSame('', $response->qrCodePix);
         $this->assertSame('', $response->qrCodeUrl);
+        $this->assertSame('', $response->pdfBase64);
     }
 
     public function testBoletoResponseToArrayIncluiCamposPix(): void
     {
         $response = new \ApiBoleto\DTO\BoletoResponse();
+        $response->pdfBase64 = 'JVBERi0xLjQ=';
         $response->qrCodePix = 'emv-payload';
         $response->qrCodeUrl = 'https://img.example.com/qr.png';
 
         $array = $response->toArray();
 
+        $this->assertSame('JVBERi0xLjQ=', $array['pdfBase64']);
         $this->assertSame('emv-payload', $array['qrCodePix']);
         $this->assertSame('https://img.example.com/qr.png', $array['qrCodeUrl']);
     }

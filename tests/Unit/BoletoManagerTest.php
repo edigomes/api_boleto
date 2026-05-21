@@ -3,6 +3,7 @@
 namespace ApiBoleto\Tests\Unit;
 
 use ApiBoleto\Banks\Santander\SantanderGateway;
+use ApiBoleto\Banks\Itau\ItauGateway;
 use ApiBoleto\BoletoManager;
 use ApiBoleto\Config\ConfigSchema;
 use ApiBoleto\Contracts\BoletoGatewayInterface;
@@ -20,6 +21,7 @@ class BoletoManagerTest extends TestCase
         $bancos = $manager->bancosDisponiveis();
 
         $this->assertContains('santander', $bancos);
+        $this->assertContains('itau', $bancos);
     }
 
     public function testBancoSantanderRetornaInstancia(): void
@@ -36,6 +38,22 @@ class BoletoManagerTest extends TestCase
 
         $this->assertInstanceOf(BoletoGatewayInterface::class, $gateway);
         $this->assertInstanceOf(SantanderGateway::class, $gateway);
+    }
+
+    public function testBancoItauRetornaInstancia(): void
+    {
+        $manager = new BoletoManager();
+        $gateway = $manager->banco('itau', [
+            'clientId'        => 'test',
+            'clientSecret'    => 'test',
+            'idBeneficiario'  => '150000123450',
+            'certFile'        => '/fake/cert.pem',
+            'certKeyFile'     => '/fake/key.pem',
+            'tokenPath'       => sys_get_temp_dir() . '/test_token_itau_' . uniqid(),
+        ]);
+
+        $this->assertInstanceOf(BoletoGatewayInterface::class, $gateway);
+        $this->assertInstanceOf(ItauGateway::class, $gateway);
     }
 
     public function testBancoNaoRegistradoLancaException(): void
@@ -100,6 +118,18 @@ class BoletoManagerTest extends TestCase
         $this->assertSame('Santander', $schema->getBanco());
         $this->assertContains('clientId', $schema->getRequiredFields());
         $this->assertContains('clientSecret', $schema->getRequiredFields());
+    }
+
+    public function testConfigSchemaItauRetornaSchema(): void
+    {
+        $manager = new BoletoManager();
+        $schema = $manager->configSchema('itau');
+
+        $this->assertInstanceOf(ConfigSchema::class, $schema);
+        $this->assertSame('Itau', $schema->getBanco());
+        $this->assertContains('clientId', $schema->getRequiredFields());
+        $this->assertContains('clientSecret', $schema->getRequiredFields());
+        $this->assertContains('beneficiario', $schema->getOneOfGroups());
     }
 
     public function testConfigSchemaDescreveCampos(): void

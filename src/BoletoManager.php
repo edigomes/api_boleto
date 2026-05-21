@@ -3,6 +3,7 @@
 namespace ApiBoleto;
 
 use ApiBoleto\Banks\Santander\SantanderGateway;
+use ApiBoleto\Banks\Itau\ItauGateway;
 use ApiBoleto\Config\ConfigSchema;
 use ApiBoleto\Contracts\BoletoGatewayInterface;
 use ApiBoleto\Contracts\ConfigurableGatewayInterface;
@@ -115,5 +116,6 @@ class BoletoManager
     private function registrarBancosNativos(): void
     {
         $this->registrarBanco('santander', SantanderGateway::class);
+        $this->registrarBanco('itau', ItauGateway::class);
     }
 }

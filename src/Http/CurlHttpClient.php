@@ -33,6 +33,7 @@ class CurlHttpClient implements HttpClientInterface
         $query = $options['query'] ?? [];
         $cert = $options['cert'] ?? [];
         $rawResponse = $options['rawResponse'] ?? false;
+        $hasBody = array_key_exists('body', $options);
 
         if (!empty($query)) {
             $url .= '?' . http_build_query($query);
@@ -51,7 +52,7 @@ class CurlHttpClient implements HttpClientInterface
             fwrite(STDERR, "\n[CurlHttpClient] {$method} {$url}\n");
         }
 
-        $this->applyMethod($ch, $method, $body, $headers);
+        $this->applyMethod($ch, $method, $body, $headers, $hasBody);
         $this->applyCertificate($ch, $cert);
         $this->applyHeaders($ch, $headers);
 
@@ -95,7 +96,7 @@ class CurlHttpClient implements HttpClientInterface
     /**
      * @param resource $ch
      */
-    private function applyMethod($ch, string $method, array $body, array &$headers): void
+    private function applyMethod($ch, string $method, $body, array &$headers, bool $hasBody): void
     {
         $method = strtoupper($method);
 
@@ -109,7 +110,7 @@ class CurlHttpClient implements HttpClientInterface
             case 'PUT':
             case 'DELETE':
                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-                if (!empty($body)) {
+                if ($hasBody) {
                     $this->applyBody($ch, $body, $headers);
                 }
                 break;
@@ -124,15 +125,15 @@ class CurlHttpClient implements HttpClientInterface
     /**
      * @param resource $ch
      */
-    private function applyBody($ch, array $body, array &$headers): void
+    private function applyBody($ch, $body, array &$headers): void
     {
         $isJson = $this->hasJsonContentType($headers);
 
         if ($isJson) {
-            $encoded = json_encode($body);
+            $encoded = is_array($body) && $body === [] ? '{}' : json_encode($body);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $encoded);
         } else {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($body));
+            curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($body) ? http_build_query($body) : (string) $body);
         }
     }
 
