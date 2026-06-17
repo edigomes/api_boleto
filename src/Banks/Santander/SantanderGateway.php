@@ -14,6 +14,7 @@ use ApiBoleto\DTO\InstrucaoBoleto;
 use ApiBoleto\Exceptions\BoletoException;
 use ApiBoleto\Http\CertificateHelper;
 use ApiBoleto\Http\CurlHttpClient;
+use ApiBoleto\Pdf\BoletoPdfRenderer;
 use ApiBoleto\Storage\FileTokenStorage;
 
 class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface, ConfigurableGatewayInterface
@@ -262,11 +263,16 @@ class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface, Co
     {
         $url = $this->gerarPdf($identificador, $payerDocumentNumber);
 
-        if (empty($url)) {
-            throw new BoletoException('Nao foi possivel obter a URL do PDF.');
+        if (!empty($url)) {
+            return $this->downloadFromUrl($url);
         }
 
-        return $this->downloadFromUrl($url);
+        $boleto = $this->consultarBoletoParaPdfLocal($identificador);
+
+        return (new BoletoPdfRenderer())->render($boleto, [
+            'bankName' => 'Banco Santander S.A.',
+            'bankCode' => '033',
+        ]);
     }
 
     // -- BankSetupInterface (Workspace + Webhook) --
@@ -435,6 +441,54 @@ class SantanderGateway implements BoletoGatewayInterface, BankSetupInterface, Co
         ]);
 
         return $response['rawBody'] ?? '';
+    }
+
+    private function consultarBoletoParaPdfLocal(string $identificador): BoletoResponse
+    {
+        $parts = $this->parsePdfIdentifier($identificador);
+        if ($parts === []) {
+            throw new BoletoException(
+                'Nao foi possivel obter a URL do PDF nem consultar dados para renderizacao local. '
+                . 'Para fallback local no Santander, use o identificador "bankNumber.covenantCode" '
+                . 'ou "covenantCode,bankNumber".'
+            );
+        }
+
+        return $this->consultarBoletoDetalhado(
+            $parts['covenantCode'],
+            $parts['bankNumber'],
+            'bankslip'
+        );
+    }
+
+    /**
+     * @return array{bankNumber:string,covenantCode:string}|array{}
+     */
+    private function parsePdfIdentifier(string $identificador): array
+    {
+        $identificador = trim($identificador);
+
+        if (strpos($identificador, ',') !== false) {
+            $parts = array_map('trim', explode(',', $identificador));
+            if (count($parts) === 2 && $parts[0] !== '' && $parts[1] !== '') {
+                return [
+                    'covenantCode' => $parts[0],
+                    'bankNumber' => $parts[1],
+                ];
+            }
+        }
+
+        if (strpos($identificador, '.') !== false) {
+            $parts = array_map('trim', explode('.', $identificador));
+            if (count($parts) === 2 && $parts[0] !== '' && $parts[1] !== '') {
+                return [
+                    'bankNumber' => $parts[0],
+                    'covenantCode' => $parts[1],
+                ];
+            }
+        }
+
+        return [];
     }
 
     private function buildUrl(string $path): string

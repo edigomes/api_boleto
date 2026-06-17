@@ -363,6 +363,49 @@ class SantanderGatewayTest extends TestCase
         $this->assertStringContainsString('cft.santander.com.br', $lastRequest['url']);
     }
 
+    public function testDownloadPdfUsaRendererLocalQuandoApiNaoRetornaLink(): void
+    {
+        $this->enqueueAuthResponse();
+        $this->fakeHttp->addResponse(200, []);
+        $this->fakeHttp->addResponse(200, [
+            'covenantCode' => '0794760',
+            'bankNumber' => '033',
+            'clientNumber' => 'REF-001',
+            'barCode' => '03398141700000001009079476000000000000330101',
+            'digitableLine' => '03399079417600000000000003301017814170000000100',
+            'nominalValue' => '1.00',
+            'dueDate' => '2026-04-15',
+            'issueDate' => '2026-03-14',
+            'documentKind' => 'DUPLICATA_MERCANTIL',
+            'beneficiary' => [
+                'name' => 'Empresa Teste',
+                'documentNumber' => '12345678000100',
+            ],
+            'payer' => [
+                'name' => 'Joao',
+                'documentNumber' => '12345678900',
+                'address' => 'Rua A',
+                'neighborhood' => 'Centro',
+                'city' => 'Sao Paulo',
+                'state' => 'SP',
+                'zipCode' => '01000-000',
+            ],
+        ]);
+
+        $gateway = $this->createGateway();
+        $binary = $gateway->downloadPdf('033.0794760', '11672771471');
+
+        $this->assertStringStartsWith('%PDF-1.4', $binary);
+        $this->assertStringContainsString('033-7', $binary);
+        $this->assertStringContainsString('Pagavel preferencialmente no Banco Santander', $binary);
+        $this->assertSame(3, $this->fakeHttp->getRequestCount());
+
+        $lastRequest = $this->fakeHttp->getLastRequest();
+        $this->assertSame('GET', $lastRequest['method']);
+        $this->assertStringContainsString('/bills/0794760.033', $lastRequest['url']);
+        $this->assertSame('bankslip', $lastRequest['options']['query']['tipoConsulta']);
+    }
+
     public function testErroSemWorkspaceId(): void
     {
         $this->expectException(BoletoException::class);

@@ -27,11 +27,11 @@ class BoletoPdfRenderer
         $this->commands = [];
         $this->images = [];
 
-        $data = $this->extractData($boleto);
         $bankName = (string) ($options['bankName'] ?? 'Banco');
         $bankCode = $this->formatBankCode((string) ($options['bankCode'] ?? ''));
+        $data = $this->extractData($boleto, $bankCode);
         $bankLogo = $this->addBankLogoImage($options, $bankCode);
-        $qrImage = $this->addQrImage($data['qr_base64']);
+        $qrImage = $this->addQrImage($data['qr_base64'], $data['qr_payload'], $data['qr_url']);
 
         $this->setLineWidth(0.5);
         $this->receiptSection($boleto, $data, $bankName, $bankCode, $bankLogo, $qrImage);
@@ -184,51 +184,76 @@ class BoletoPdfRenderer
         }
     }
 
-    private function extractData(BoletoResponse $boleto): array
+    private function extractData(BoletoResponse $boleto, string $bankCode): array
     {
         $api = $boleto->dadosOriginais;
         $data = $api['data'] ?? $api;
         $dado = $data['dado_boleto'] ?? $api['dado_boleto'] ?? [];
         $individual = $this->firstItem($dado['dados_individuais_boleto'] ?? []);
-        $beneficiario = $data['beneficiario'] ?? $api['beneficiario'] ?? [];
-        $pagador = $dado['pagador'] ?? $data['pagador'] ?? $api['pagador'] ?? [];
+        $beneficiario = $data['beneficiario'] ?? $api['beneficiario'] ?? $data['beneficiary'] ?? $api['beneficiary'] ?? [];
+        $pagador = $dado['pagador'] ?? $data['pagador'] ?? $api['pagador'] ?? $data['payer'] ?? $api['payer'] ?? [];
 
-        $pagadorPessoa = $pagador['pessoa'] ?? [];
+        $pagadorPessoa = $pagador['pessoa'] ?? $pagador;
         $pagadorTipoPessoa = $pagadorPessoa['tipo_pessoa'] ?? [];
-        $pagadorEndereco = $pagador['endereco'] ?? [];
+        $pagadorEndereco = $pagador['endereco'] ?? $pagador;
 
         $beneficiarioDocumento = $this->extractDocument($beneficiario['tipo_pessoa'] ?? $beneficiario);
         $pagadorNome = (string) $this->firstNonEmpty([
             $pagadorPessoa['nome_pessoa'] ?? null,
+            $pagadorPessoa['name'] ?? null,
+            $pagador['name'] ?? null,
             $pagador['nomePagador'] ?? null,
         ]);
         $pagadorDocumento = (string) $this->firstNonEmpty([
             $this->extractDocument($pagadorTipoPessoa),
+            $pagadorPessoa['documentNumber'] ?? null,
+            $pagador['documentNumber'] ?? null,
             $pagador['numeroDocumento'] ?? null,
         ]);
         $beneficiarioNome = (string) $this->firstNonEmpty([
             $beneficiario['nome_cobranca'] ?? null,
             $beneficiario['nome'] ?? null,
+            $beneficiario['name'] ?? null,
         ]);
         $beneficiarioEndereco = $this->formatAddress($beneficiario['endereco'] ?? []);
         $beneficiarioNomeDocumento = $this->nameAndDocument($beneficiarioNome, $beneficiarioDocumento);
         $idBeneficiario = (string) $this->firstNonEmpty([
             $beneficiario['id_beneficiario'] ?? null,
             $beneficiario['idBeneficiario'] ?? null,
+            $data['beneficiaryCode'] ?? null,
+            $api['beneficiaryCode'] ?? null,
+            $data['covenantCode'] ?? null,
+            $api['covenantCode'] ?? null,
         ]);
         $codigoCarteira = (string) $this->firstNonEmpty([
             $dado['codigo_carteira'] ?? null,
             $data['codigoCarteira'] ?? null,
+            $data['walletCode'] ?? null,
+            $api['walletCode'] ?? null,
         ]);
         $codigoEspecie = (string) $this->firstNonEmpty([
             $dado['codigo_especie'] ?? null,
             $data['especie']['codigoEspecie'] ?? null,
             $data['codigoEspecie'] ?? null,
+            $data['documentKind'] ?? null,
+            $api['documentKind'] ?? null,
         ]);
         $nossoNumero = (string) $this->firstNonEmpty([
             $boleto->nossoNumero,
             $individual['numero_nosso_numero'] ?? null,
             $data['nossoNumero'] ?? null,
+            $data['bankNumber'] ?? null,
+            $api['bankNumber'] ?? null,
+            $data['participantCode'] ?? null,
+            $api['participantCode'] ?? null,
+        ]);
+        $seuNumero = (string) $this->firstNonEmpty([
+            $individual['texto_seu_numero'] ?? null,
+            $data['seuNumero'] ?? null,
+            $data['clientNumber'] ?? null,
+            $api['clientNumber'] ?? null,
+            $data['nsuCode'] ?? null,
+            $api['nsuCode'] ?? null,
         ]);
 
         return [
@@ -249,32 +274,43 @@ class BoletoPdfRenderer
                 $data['beneficiario_final'] ?? null,
                 $api['beneficiario_final'] ?? null,
             ]),
-            'seu_numero' => (string) $this->firstNonEmpty([
-                $individual['texto_seu_numero'] ?? null,
-                $data['seuNumero'] ?? null,
-            ]),
+            'seu_numero' => $seuNumero,
             'nosso_numero_formatado' => $codigoCarteira !== '' && $nossoNumero !== ''
                 ? $codigoCarteira . '/' . $nossoNumero
                 : $nossoNumero,
             'data_documento' => (string) $this->firstNonEmpty([
                 $dado['data_emissao'] ?? null,
                 $data['dataEmissao'] ?? null,
+                $data['issueDate'] ?? null,
+                $api['issueDate'] ?? null,
+                $data['nsuDate'] ?? null,
+                $api['nsuDate'] ?? null,
             ]),
             'data_processamento' => (string) $this->firstNonEmpty([
                 $dado['data_emissao'] ?? null,
                 $data['dataEntrada'] ?? null,
                 $data['dataEmissao'] ?? null,
+                $data['issueDate'] ?? null,
+                $api['issueDate'] ?? null,
+                $data['nsuDate'] ?? null,
+                $api['nsuDate'] ?? null,
             ]),
             'aceite' => 'N',
-            'local_pagamento' => $this->localPagamento(),
+            'local_pagamento' => $this->localPagamento($bankCode),
             'instrucoes' => $this->instrucoes($dado, $individual, $data),
             'desconto_abatimento' => $this->formatCurrency((string) $this->firstNonEmpty([
                 $dado['valor_abatimento'] ?? null,
                 $data['valorAbatimento'] ?? null,
+                $data['deductionValue'] ?? null,
+                $api['deductionValue'] ?? null,
+                $data['discount']['discountOne']['value'] ?? null,
+                $api['discount']['discountOne']['value'] ?? null,
             ])),
             'juros_multa' => $this->formatJurosMulta($dado, $data),
             'sacador_avalista' => $this->formatSacadorAvalista($dado, $data),
             'qr_base64' => $this->extractQrBase64($api),
+            'qr_payload' => $this->extractQrPayload($boleto, $api),
+            'qr_url' => $this->extractQrUrl($boleto, $api),
         ];
     }
 
@@ -296,6 +332,14 @@ class BoletoPdfRenderer
             }
         }
 
+        foreach (($data['messages'] ?? []) as $item) {
+            if (is_string($item) && $item !== '') {
+                $mensagens[] = $item;
+            } elseif (is_array($item) && isset($item['mensagem']) && (string) $item['mensagem'] !== '') {
+                $mensagens[] = (string) $item['mensagem'];
+            }
+        }
+
         if (isset($dado['data_limite_pagamento'])) {
             $mensagens[] = 'Banco autorizado a receber ate ' . $this->formatDate((string) $dado['data_limite_pagamento']) . '.';
         } elseif (isset($data['dataLimitePagamento'])) {
@@ -305,8 +349,13 @@ class BoletoPdfRenderer
         return implode(' ', array_unique($mensagens));
     }
 
-    private function localPagamento(): string
+    private function localPagamento(string $bankCode): string
     {
+        $digits = substr(preg_replace('/\D/', '', $bankCode) ?? '', 0, 3);
+        if ($digits === '033') {
+            return 'Pagavel preferencialmente no Banco Santander';
+        }
+
         return 'Ate o vencimento, preferencialmente no Itau';
     }
 
@@ -350,6 +399,18 @@ class BoletoPdfRenderer
             }
         }
 
+        if (!empty($data['interestPercentage'])) {
+            $parts[] = 'Juros ' . (string) $data['interestPercentage'] . '%';
+        } elseif (!empty($data['interestValue'])) {
+            $parts[] = 'Juros ' . $this->formatCurrency((string) $data['interestValue']);
+        }
+
+        if (!empty($data['finePercentage'])) {
+            $parts[] = 'Multa ' . (string) $data['finePercentage'] . '%';
+        } elseif (!empty($data['fineValue'])) {
+            $parts[] = 'Multa ' . $this->formatCurrency((string) $data['fineValue']);
+        }
+
         return implode(' / ', array_unique($parts));
     }
 
@@ -374,6 +435,8 @@ class BoletoPdfRenderer
             $tipoPessoa['numero_cadastro_nacional_pessoa_juridica'] ?? null,
             $tipoPessoa['numeroDocumento'] ?? null,
             $tipoPessoa['numero_documento'] ?? null,
+            $tipoPessoa['documentNumber'] ?? null,
+            $tipoPessoa['document_number'] ?? null,
         ]);
     }
 
@@ -404,6 +467,7 @@ class BoletoPdfRenderer
         $logradouro = (string) $this->firstNonEmpty([
             $endereco['nome_logradouro'] ?? null,
             $endereco['logradouro'] ?? null,
+            $endereco['address'] ?? null,
         ]);
         $numero = (string) ($endereco['numero'] ?? '');
         if ($numero !== '' && strpos($logradouro, $numero) === false) {
@@ -412,10 +476,10 @@ class BoletoPdfRenderer
 
         $parts = array_filter([
             $logradouro,
-            $endereco['nome_bairro'] ?? $endereco['bairro'] ?? '',
-            $endereco['nome_cidade'] ?? $endereco['cidade'] ?? '',
-            $endereco['sigla_UF'] ?? $endereco['uf'] ?? '',
-            $this->formatCep((string) ($endereco['numero_CEP'] ?? $endereco['cep'] ?? '')),
+            $endereco['nome_bairro'] ?? $endereco['bairro'] ?? $endereco['neighborhood'] ?? '',
+            $endereco['nome_cidade'] ?? $endereco['cidade'] ?? $endereco['city'] ?? '',
+            $endereco['sigla_UF'] ?? $endereco['uf'] ?? $endereco['state'] ?? '',
+            $this->formatCep((string) ($endereco['numero_CEP'] ?? $endereco['cep'] ?? $endereco['zipCode'] ?? '')),
         ], static fn($value): bool => (string) $value !== '');
 
         return implode(' - ', array_map('strval', $parts));
@@ -492,8 +556,18 @@ class BoletoPdfRenderer
     private function formatBankCode(string $bankCode): string
     {
         $digits = preg_replace('/\D/', '', $bankCode) ?? '';
-        if ($digits === '341' || $bankCode === '') {
-            return '341-7';
+        $baseCode = substr($digits, 0, 3);
+        $codes = [
+            '033' => '033-7',
+            '341' => '341-7',
+        ];
+
+        if ($bankCode === '') {
+            return $codes['341'];
+        }
+
+        if (isset($codes[$baseCode])) {
+            return $codes[$baseCode];
         }
 
         return $bankCode;
@@ -640,16 +714,107 @@ class BoletoPdfRenderer
             ?? $api['dados_qrcode']
             ?? $data['dadosQrcode']
             ?? $api['dadosQrcode']
+            ?? $data['qrCode']
+            ?? $api['qrCode']
             ?? [];
 
-        if (!is_array($qrcode)) {
-            return '';
+        if (is_array($qrcode)) {
+            return (string) ($qrcode['base64']
+                ?? $qrcode['imagemBase64']
+                ?? $qrcode['imageBase64']
+                ?? $qrcode['qrCodeBase64']
+                ?? '');
         }
 
-        return (string) ($qrcode['base64'] ?? $qrcode['imagemBase64'] ?? '');
+        return (string) $this->firstNonEmpty([
+            $data['qrCodeBase64'] ?? null,
+            $api['qrCodeBase64'] ?? null,
+            $data['qrCodeImageBase64'] ?? null,
+            $api['qrCodeImageBase64'] ?? null,
+        ]);
     }
 
-    private function addQrImage(string $base64): string
+    private function extractQrPayload(BoletoResponse $boleto, array $api): string
+    {
+        $data = $api['data'] ?? $api;
+        $qrcode = $data['dados_qrcode']
+            ?? $api['dados_qrcode']
+            ?? $data['dadosQrcode']
+            ?? $api['dadosQrcode']
+            ?? $data['qrCode']
+            ?? $api['qrCode']
+            ?? [];
+
+        $values = [
+            $boleto->qrCodePix,
+            $data['qrCodePix'] ?? null,
+            $api['qrCodePix'] ?? null,
+            $data['emvqrcps'] ?? null,
+            $api['emvqrcps'] ?? null,
+            $data['pixQrCode'] ?? null,
+            $api['pixQrCode'] ?? null,
+            $data['pixCopiaECola'] ?? null,
+            $api['pixCopiaECola'] ?? null,
+        ];
+
+        if (is_array($qrcode)) {
+            $values[] = $qrcode['emv'] ?? null;
+            $values[] = $qrcode['emvqrcps'] ?? null;
+            $values[] = $qrcode['pixCopiaECola'] ?? null;
+            $values[] = $qrcode['payload'] ?? null;
+        }
+
+        return (string) $this->firstNonEmpty($values);
+    }
+
+    private function extractQrUrl(BoletoResponse $boleto, array $api): string
+    {
+        $data = $api['data'] ?? $api;
+        $qrcode = $data['dados_qrcode']
+            ?? $api['dados_qrcode']
+            ?? $data['dadosQrcode']
+            ?? $api['dadosQrcode']
+            ?? $data['qrCode']
+            ?? $api['qrCode']
+            ?? [];
+
+        $values = [
+            $boleto->qrCodeUrl,
+            $data['qrCodeUrl'] ?? null,
+            $api['qrCodeUrl'] ?? null,
+            $data['qrCodeImageUrl'] ?? null,
+            $api['qrCodeImageUrl'] ?? null,
+            $data['pixQrCodeUrl'] ?? null,
+            $api['pixQrCodeUrl'] ?? null,
+        ];
+
+        if (is_array($qrcode)) {
+            $values[] = $qrcode['location'] ?? null;
+            $values[] = $qrcode['url'] ?? null;
+            $values[] = $qrcode['imageUrl'] ?? null;
+        }
+
+        return (string) $this->firstNonEmpty($values);
+    }
+
+    private function addQrImage(string $base64, string $payload = '', string $url = ''): string
+    {
+        $fromBase64 = $this->addQrImageFromBase64($base64);
+        if ($fromBase64 !== '') {
+            return $fromBase64;
+        }
+
+        if ($payload !== '') {
+            $binary = (new SimpleQrCode())->renderPng($payload);
+            if ($binary !== '') {
+                return $this->addImageFromBinary($binary);
+            }
+        }
+
+        return $this->addQrImageFromUrl($url);
+    }
+
+    private function addQrImageFromBase64(string $base64): string
     {
         if ($base64 === '') {
             return '';
@@ -666,6 +831,35 @@ class BoletoPdfRenderer
         }
 
         return $this->addImageFromBinary($binary);
+    }
+
+    private function addQrImageFromUrl(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        if (preg_match('/^data:[^,]+,(.+)$/', $url, $matches)) {
+            return $this->addQrImageFromBase64($matches[1]);
+        }
+
+        if (is_file($url)) {
+            $binary = @file_get_contents($url);
+            return is_string($binary) ? $this->addImageFromBinary($binary) : '';
+        }
+
+        if (!preg_match('/^https?:\/\//i', $url) || !ini_get('allow_url_fopen')) {
+            return '';
+        }
+
+        $context = stream_context_create([
+            'http' => ['timeout' => 5],
+            'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+        ]);
+        $binary = @file_get_contents($url, false, $context);
+
+        return is_string($binary) ? $this->addImageFromBinary($binary) : '';
     }
 
     private function addBankLogoImage(array $options, string $bankCode): string

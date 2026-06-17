@@ -145,6 +145,59 @@ class BoletoPdfRendererTest extends TestCase
         $this->assertStringContainsString('/Im2', $pdf);
     }
 
+    public function testRenderSantanderIncluiDadosDoBancoEImagemQrPorPayloadPix(): void
+    {
+        if (!function_exists('imagecreatefromstring')
+            || !function_exists('imagecreatetruecolor')
+            || !function_exists('imagepng')
+            || !function_exists('gzcompress')) {
+            $this->markTestSkipped('GD/zlib indisponivel para validar imagem QR no PDF.');
+        }
+
+        $boleto = BoletoResponse::fromArray([
+            'nossoNumero' => '000000007841',
+            'linhaDigitavel' => '03399021994950000000200784101016990180000000620',
+            'valor' => '6.20',
+            'vencimento' => '2022-06-16',
+            'qrCodePix' => '00020101021226860014br.gov.bcb.pix2564pix.example.com/qr/v2/12352040000530398654046.205802BR5909VENDEDOR6009SAO PAULO62070503***6304ABCD',
+            'dadosOriginais' => [
+                'covenantCode' => '02199495',
+                'bankNumber' => '000000007841',
+                'clientNumber' => 'NF0001258993862',
+                'issueDate' => '2022-06-09',
+                'documentKind' => 'DUPLICATA_MERCANTIL',
+                'beneficiary' => [
+                    'name' => 'VENCU EQUIPAMENTOS LTDA',
+                    'documentNumber' => '72927528000111',
+                ],
+                'payer' => [
+                    'name' => 'CARLOS HK',
+                    'documentNumber' => '00000125893862',
+                    'address' => 'AV DAS MACOES',
+                    'neighborhood' => 'CENTRO',
+                    'city' => 'SAO PAULO',
+                    'state' => 'SP',
+                    'zipCode' => '04795-100',
+                ],
+                'messages' => ['Teste Santander com PIX.'],
+            ],
+        ]);
+
+        $pdf = (new BoletoPdfRenderer())->render($boleto, [
+            'bankName' => 'Banco Santander S.A.',
+            'bankCode' => '033',
+        ]);
+
+        $this->assertStringStartsWith('%PDF-1.4', $pdf);
+        $this->assertStringContainsString('033-7', $pdf);
+        $this->assertStringContainsString('Pagavel preferencialmente no Banco Santander', $pdf);
+        $this->assertStringContainsString('NF0001258993862', $pdf);
+        $this->assertStringContainsString('VENCU EQUIPAMENTOS LTDA', $pdf);
+        $this->assertStringContainsString('/XObject', $pdf);
+        $this->assertStringContainsString('/Im1', $pdf);
+        $this->assertStringContainsString('/Im2', $pdf);
+    }
+
     public function testRenderCodificaAcentosComoWinAnsiComMapaUnicode(): void
     {
         $nome = 'Edim' . "\xC3\xA1" . 'rio Gomes';

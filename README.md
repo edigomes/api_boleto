@@ -266,6 +266,30 @@ Cada banco usa um formato diferente de identificador dependendo da operação. A
 - **`consultarBoleto`**: Aceita o ID composto retornado na criação no formato `{nsuCode}.{nsuDate}.{envLetter}.{covenantCode}.{bankNumber}`.
 - **Segundo parâmetro do PDF**: `payerDocumentNumber` (CPF/CNPJ do pagador) é obrigatório na API do Santander.
 
+### PDF local no Santander
+
+O Santander normalmente retorna uma URL oficial no endpoint de PDF. Se essa URL vier vazia, `downloadPdf()` tenta consultar os dados do boleto e renderizar localmente usando o layout Santander:
+
+```php
+$pdfBinario = $gateway->downloadPdf('033.0794760', '12345678900');
+file_put_contents('boleto_santander.pdf', $pdfBinario);
+```
+
+Para esse fallback local, use `bankNumber.covenantCode` ou `covenantCode,bankNumber`, porque a lib precisa consultar o boleto detalhado antes de montar o PDF.
+
+Se voce acabou de criar/consultar o boleto e ja tem o `BoletoResponse`, tambem pode renderizar direto:
+
+```php
+use ApiBoleto\Pdf\BoletoPdfRenderer;
+
+$pdfBinario = (new BoletoPdfRenderer())->render($response, [
+    'bankName' => 'Banco Santander S.A.',
+    'bankCode' => '033',
+]);
+```
+
+O renderer Santander inclui o QR Code PIX quando a API retorna imagem em base64 ou quando `qrCodePix`/`emvqrcps` traz o payload EMV ("copia e cola"). O logo padrao fica em `resources/logos/banks/santander.png`; para sobrescrever, informe `logoPath`.
+
 ## Campos Extras (Específicos do Banco)
 
 Cada banco pode ter campos específicos. Use `dadosExtras` no DTO `Boleto` para campos de criação, e `dadosExtras` no `InstrucaoBoleto` para campos de alteração/cancelamento:
