@@ -64,7 +64,7 @@ class BoletoPdfRenderer
         $this->field('Numero do Documento', $data['seu_numero'], $x, 745, 135, 23, false, 7.2, true);
         $this->field('CPF/CNPJ', $this->formatDocument($data['beneficiario_documento']), 163, 745, 130, 23, false, 7.2, true);
         $this->field('Vencimento', $this->formatDate($boleto->vencimento), 293, 745, 95, 23, false, 7.2, true);
-        $this->field('Valor do Documento', $this->formatCurrency($boleto->valor), 388, 745, 179, 23, true, 7.2);
+        $this->field('Valor do Documento', $this->formatBoletoValue($boleto), 388, 745, 179, 23, true, 7.2);
 
         $this->field('(-) Descontos/Abatimentos', $data['desconto_abatimento'], $x, 721, 97, 24);
         $this->field('(-) Outras Deducoes', '', 125, 721, 97, 24);
@@ -124,9 +124,23 @@ class BoletoPdfRenderer
         $this->field('Especie', 'R$', 188, 235, 56, 28);
         $this->field('Quantidade', '', 244, 235, 103, 28);
         $this->field('Valor', '', 347, 235, 100, 28);
-        $this->field('(=) Valor do Documento', $this->formatCurrency($boleto->valor), 447, 235, 120, 28, true);
+        $this->field('(=) Valor do Documento', $this->formatBoletoValue($boleto), 447, 235, 120, 28, true);
 
-        $this->multiField('Instrucoes de responsabilidade do BENEFICIARIO', $data['instrucoes'], $x, 151, 419, 84, 6.8, 9);
+        if ($qrImage !== '') {
+            $this->multiFieldWithQr(
+                'Instrucoes de responsabilidade do BENEFICIARIO',
+                $data['instrucoes'],
+                $x,
+                151,
+                419,
+                84,
+                $qrImage,
+                6.8,
+                9
+            );
+        } else {
+            $this->multiField('Instrucoes de responsabilidade do BENEFICIARIO', $data['instrucoes'], $x, 151, 419, 84, 6.8, 9);
+        }
         $this->field('(-) Desconto / Abatimento', $data['desconto_abatimento'], 447, 207, 120, 28);
         $this->field('(-) Outras Deducoes', '', 447, 179, 120, 28);
         $this->field('(+) Mora / Multa', $data['juros_multa'], 447, 151, 120, 28);
@@ -136,11 +150,6 @@ class BoletoPdfRenderer
         $payerValue = $data['pagador_nome_documento'] . ' - ' . $data['pagador_endereco'];
         $this->multiField('Pagador', $payerValue, $x, 107, 419, 44, 6.8, 3);
         $this->field('Sacador/Avalista', $data['sacador_avalista'], $x, 79, 419, 28);
-
-        if ($qrImage !== '') {
-            $this->rect(379, 79, 68, 68);
-            $this->drawImage($qrImage, 383, 83, 60, 60);
-        }
 
         if ($codigoBarras !== '') {
             $this->drawInterleaved2of5($codigoBarras, 40, 35, 42);
@@ -526,7 +535,7 @@ class BoletoPdfRenderer
             return '';
         }
 
-        if (ctype_digit($normalized) && strlen($normalized) > 2) {
+        if (ctype_digit($normalized) && strlen($normalized) > 2 && $normalized[0] === '0') {
             $amount = ((int) $normalized) / 100;
         } else {
             $amount = (float) str_replace(',', '.', $normalized);
@@ -537,6 +546,31 @@ class BoletoPdfRenderer
         }
 
         return 'R$ ' . number_format($amount, 2, ',', '.');
+    }
+
+    private function formatBoletoValue(BoletoResponse $boleto): string
+    {
+        $amountFromLine = $this->valorFromLinhaDigitavel($boleto->linhaDigitavel);
+        if ($amountFromLine !== '') {
+            return $this->formatCurrency($amountFromLine);
+        }
+
+        return $this->formatCurrency($boleto->valor);
+    }
+
+    private function valorFromLinhaDigitavel(string $linhaDigitavel): string
+    {
+        $digits = preg_replace('/\D/', '', $linhaDigitavel) ?? '';
+        if (strlen($digits) !== 47) {
+            return '';
+        }
+
+        $amount = substr($digits, 37, 10);
+        if ($amount === '' || !ctype_digit($amount) || (int) $amount <= 0) {
+            return '';
+        }
+
+        return number_format(((int) $amount) / 100, 2, '.', '');
     }
 
     private function formatDate(string $date): string
@@ -648,6 +682,36 @@ class BoletoPdfRenderer
         $this->text($x + 3, $y + $h - 8, $label, 5.8, true);
         $lines = array_slice($this->wrapText($value, max(8, (int) floor($w / ($size * 0.72)))), 0, $maxLines);
         $this->textLines($lines, $x + 3, $y + $h - 18, $w - 6, $size, $size + 2, $valueBold);
+    }
+
+    private function multiFieldWithQr(
+        string $label,
+        string $value,
+        float $x,
+        float $y,
+        float $w,
+        float $h,
+        string $qrImage,
+        float $size = 7,
+        int $maxLines = 5
+    ): void {
+        $this->rect($x, $y, $w, $h);
+        $this->text($x + 3, $y + $h - 8, $label, 5.8, true);
+
+        $qrBox = min(64, max(40, (int) $h - 20));
+        $qrX = $x + $w - $qrBox - 12;
+        $qrY = $y + (($h - $qrBox) / 2) - 2;
+        $textWidth = max(80, $qrX - $x - 9);
+
+        $lines = array_slice(
+            $this->wrapText($value, max(8, (int) floor($textWidth / ($size * 0.72)))),
+            0,
+            $maxLines
+        );
+        $this->textLines($lines, $x + 3, $y + $h - 18, $textWidth, $size, $size + 2);
+
+        $this->rect($qrX, $qrY, $qrBox, $qrBox);
+        $this->drawImage($qrImage, $qrX + 4, $qrY + 4, $qrBox - 8, $qrBox - 8);
     }
 
     private function wrapText(string $value, int $limit): array

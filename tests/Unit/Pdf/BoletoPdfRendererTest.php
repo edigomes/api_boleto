@@ -196,6 +196,42 @@ class BoletoPdfRendererTest extends TestCase
         $this->assertStringContainsString('/XObject', $pdf);
         $this->assertStringContainsString('/Im1', $pdf);
         $this->assertStringContainsString('/Im2', $pdf);
+        $this->assertStringContainsString('371.00 159.00 64.00 64.00 re S', $pdf);
+        $this->assertStringNotContainsString('379.00 79.00 68.00 68.00 re S', $pdf);
+    }
+
+    public function testRenderSantanderFormataValorInteiroComoReais(): void
+    {
+        $boleto = BoletoResponse::fromArray([
+            'nossoNumero' => '10417',
+            'linhaDigitavel' => '03399079417600000000001041701010914920000307500',
+            'valor' => '3075',
+            'vencimento' => '2026-06-29',
+            'dadosOriginais' => [
+                'covenantCode' => '0794760',
+                'bankNumber' => '10417',
+                'clientNumber' => '615',
+                'issueDate' => '2026-06-15',
+                'documentKind' => 'DM',
+                'beneficiary' => [
+                    'name' => 'DISTRIBUIDORA BOI REAL LTDA',
+                    'documentNumber' => '64726807000199',
+                ],
+                'payer' => [
+                    'name' => 'SUPERMERCADO BEM ESTAR NAZARE LTDA',
+                    'documentNumber' => '54098347000148',
+                    'address' => 'RUA GENERAL OSORIO',
+                ],
+            ],
+        ]);
+
+        $pdf = (new BoletoPdfRenderer())->render($boleto, [
+            'bankName' => 'Banco Santander S.A.',
+            'bankCode' => '033',
+        ]);
+
+        $this->assertStringContainsString('R$ 3.075,00', $pdf);
+        $this->assertStringNotContainsString('R$ 30,75', $pdf);
     }
 
     public function testRenderCodificaAcentosComoWinAnsiComMapaUnicode(): void
