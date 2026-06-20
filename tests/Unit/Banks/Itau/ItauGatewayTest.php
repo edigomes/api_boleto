@@ -443,6 +443,52 @@ class ItauGatewayTest extends TestCase
         $this->assertSame('https://boletos.cloud.itau.com.br/boletos/v3/notificacoes_boletos', $lastRequest['url']);
         $this->assertSame('https://app.test/webhook', $lastRequest['options']['body']['data']['webhook_url']);
         $this->assertSame('150000123450', $lastRequest['options']['body']['data']['id_beneficiario']);
+        $this->assertTrue($this->hasHeader($lastRequest['options']['headers'], 'auth: Bearer fake-token-itau'));
+    }
+
+    public function testConsultarSetupConsultaTiposDeNotificacao(): void
+    {
+        $this->enqueueAuthResponse();
+        $this->fakeHttp->addResponse(200, [
+            'data' => [[
+                'id_notificacao_boleto' => '15000012345001',
+                'tipo_notificacao' => 'BAIXA_EFETIVA',
+            ]],
+        ]);
+        $this->fakeHttp->addResponse(200, [
+            'data' => [[
+                'id_notificacao_boleto' => '15000012345002',
+                'tipo_notificacao' => 'BAIXA_OPERACIONAL',
+            ]],
+        ]);
+
+        $gateway = $this->createGateway();
+        $result = $gateway->consultarSetup();
+
+        $this->assertCount(2, $result['data']);
+        $this->assertSame('BAIXA_EFETIVA', $result['data'][0]['tipo_notificacao']);
+        $this->assertSame('BAIXA_OPERACIONAL', $result['data'][1]['tipo_notificacao']);
+
+        $history = $this->fakeHttp->getRequestHistory();
+        $this->assertSame('GET', $history[1]['method']);
+        $this->assertSame('GET', $history[2]['method']);
+        $this->assertSame('150000123450', $history[1]['options']['query']['id_beneficiario']);
+        $this->assertSame('BAIXA_EFETIVA', $history[1]['options']['query']['tipo_notificacao']);
+        $this->assertSame('BAIXA_OPERACIONAL', $history[2]['options']['query']['tipo_notificacao']);
+        $this->assertTrue($this->hasHeader($history[1]['options']['headers'], 'auth: Bearer fake-token-itau'));
+        $this->assertTrue($this->hasHeader($history[2]['options']['headers'], 'auth: Bearer fake-token-itau'));
+    }
+
+    public function testConsultarSetupTrata404ComoNaoConfigurado(): void
+    {
+        $this->enqueueAuthResponse();
+        $this->fakeHttp->addResponse(404);
+        $this->fakeHttp->addResponse(404);
+
+        $gateway = $this->createGateway();
+        $result = $gateway->consultarSetup();
+
+        $this->assertSame(['data' => []], $result);
     }
 
     public function testConsultarFrancesasDerivaAgenciaContaDacDoBeneficiario(): void

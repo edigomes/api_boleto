@@ -11,6 +11,7 @@ use ApiBoleto\Contracts\TokenStorageInterface;
 use ApiBoleto\DTO\Boleto;
 use ApiBoleto\DTO\BoletoResponse;
 use ApiBoleto\DTO\InstrucaoBoleto;
+use ApiBoleto\Exceptions\ApiException;
 use ApiBoleto\Exceptions\BoletoException;
 use ApiBoleto\Http\CertificateHelper;
 use ApiBoleto\Http\CurlHttpClient;
@@ -60,6 +61,9 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
 
     private bool $usarApiBoletosV1;
 
+    /** @var string[] */
+    private array $webhookTiposNotificacoes;
+
     public function __construct(array $config)
     {
         $this->validateConfig($config);
@@ -86,6 +90,7 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
             $config['pixEndpointPath'] ?? ($this->pixLegacyPayload ? '/boletos_pix' : '/boletos-pix')
         );
         $this->usarApiBoletosV1 = (bool) ($config['usarApiBoletosV1'] ?? $config['useBoletoV1'] ?? false);
+        $this->webhookTiposNotificacoes = $this->resolveWebhookTiposNotificacoes($config);
 
         $this->certificateHelper = new CertificateHelper($config);
         $this->httpClient = $config['httpClient'] ?? new CurlHttpClient();
@@ -261,7 +266,9 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
         $response = $this->authenticatedRequest(
             'POST',
             $this->webhookBaseUrl . '/notificacoes_boletos',
-            $payload
+            $payload,
+            [],
+            true
         );
 
         return $response['body'] ?? [];
@@ -273,16 +280,30 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
 
         if ($id !== null) {
             $url .= '/' . rawurlencode($id);
-            $response = $this->authenticatedRequest('GET', $url);
+            $response = $this->authenticatedRequest('GET', $url, [], [], true);
 
             return $response['body'] ?? [];
         }
 
-        $response = $this->authenticatedRequest('GET', $url, [], [
-            'id_beneficiario' => $this->idBeneficiario,
-        ]);
+        $setups = [];
+        foreach ($this->webhookTiposNotificacoes as $tipoNotificacao) {
+            try {
+                $response = $this->authenticatedRequest('GET', $url, [], [
+                    'id_beneficiario' => $this->idBeneficiario,
+                    'tipo_notificacao' => $tipoNotificacao,
+                ], true);
+            } catch (ApiException $exception) {
+                if ($exception->getStatusCode() === 404) {
+                    continue;
+                }
 
-        return $response['body'] ?? [];
+                throw $exception;
+            }
+
+            $setups = array_merge($setups, $this->extractSetupItems($response['body'] ?? []));
+        }
+
+        return ['data' => $this->deduplicateSetupItems($setups)];
     }
 
     public function atualizarSetup(string $id, array $params): array
@@ -290,7 +311,9 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
         $response = $this->authenticatedRequest(
             'PATCH',
             $this->webhookBaseUrl . '/notificacoes_boletos/' . rawurlencode($id),
-            $params
+            $params,
+            [],
+            true
         );
 
         return $response['body'] ?? [];
@@ -305,7 +328,10 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
     {
         $this->authenticatedRequest(
             'DELETE',
-            $this->webhookBaseUrl . '/notificacoes_boletos/' . rawurlencode($id)
+            $this->webhookBaseUrl . '/notificacoes_boletos/' . rawurlencode($id),
+            [],
+            [],
+            true
         );
 
         return true;
@@ -317,7 +343,8 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
             'GET',
             $this->webhookBaseUrl . '/francesas',
             [],
-            $this->normalizeFrancesaFilters($filtros)
+            $this->normalizeFrancesaFilters($filtros),
+            true
         );
 
         return $response['body'] ?? [];
@@ -334,7 +361,8 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
             'GET',
             $this->webhookBaseUrl . '/francesas/' . rawurlencode($idFrancesa) . '/movimentacoes',
             [],
-            $this->normalizeMovimentacaoFrancesaFilters($filtros)
+            $this->normalizeMovimentacaoFrancesaFilters($filtros),
+            true
         );
 
         return $response['body'] ?? [];
@@ -351,7 +379,8 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
             'GET',
             $this->webhookBaseUrl . '/francesas/' . rawurlencode($idFrancesa) . '/movimentacoes_resumidas',
             [],
-            $this->normalizeMovimentacaoFrancesaResumoFilters($filtros)
+            $this->normalizeMovimentacaoFrancesaResumoFilters($filtros),
+            true
         );
 
         return $response['body'] ?? [];
@@ -596,6 +625,8 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
             ->optional('pixEndpointPath', 'string', '/boletos-pix', 'Path de emissao Bolecode Pix')
             ->optional('pixLegacyPayload', 'bool', false, 'Usa payload Bolecode legado/oficial da colecao Postman')
             ->optional('bolecodeLegacyPayload', 'bool', false, 'Alias para pixLegacyPayload')
+            ->optional('tiposNotificacoes', 'mixed', ['BAIXA_EFETIVA', 'BAIXA_OPERACIONAL'], 'Tipos de notificacao do webhook')
+            ->optional('tipos_notificacoes', 'mixed', ['BAIXA_EFETIVA', 'BAIXA_OPERACIONAL'], 'Alias para tiposNotificacoes')
             ->optional('tokenKey', 'string', null, 'Chave unica para armazenar token')
             ->optional('baseUrl', 'string', null, 'Alias para apiBaseUrl')
             ->optional('httpClient', 'mixed', null, 'Instancia de HttpClientInterface customizada');
@@ -633,5 +664,64 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
         }
 
         return $trimmed;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function resolveWebhookTiposNotificacoes(array $config): array
+    {
+        $tipos = $config['tiposNotificacoes']
+            ?? $config['tipos_notificacoes']
+            ?? ['BAIXA_EFETIVA', 'BAIXA_OPERACIONAL'];
+
+        if (is_string($tipos)) {
+            $tipos = explode(',', $tipos);
+        }
+
+        if (!is_array($tipos)) {
+            $tipos = [];
+        }
+
+        $normalized = [];
+        foreach ($tipos as $tipo) {
+            $tipo = strtoupper(trim((string) $tipo));
+            if ($tipo !== '') {
+                $normalized[] = $tipo;
+            }
+        }
+
+        return array_values(array_unique($normalized)) ?: ['BAIXA_EFETIVA', 'BAIXA_OPERACIONAL'];
+    }
+
+    private function extractSetupItems(array $body): array
+    {
+        if (empty($body)) {
+            return [];
+        }
+
+        $data = $body['data'] ?? $body;
+        if (!is_array($data)) {
+            return [];
+        }
+
+        if (isset($data['id_notificacao_boleto']) || isset($data['id_notificacao_boletos'])) {
+            return [$data];
+        }
+
+        return array_values(array_filter($data, static fn($item): bool => is_array($item)));
+    }
+
+    private function deduplicateSetupItems(array $items): array
+    {
+        $indexed = [];
+        foreach ($items as $item) {
+            $key = $item['id_notificacao_boleto']
+                ?? $item['id_notificacao_boletos']
+                ?? md5(json_encode($item) ?: serialize($item));
+            $indexed[$key] = $item;
+        }
+
+        return array_values($indexed);
     }
 }
