@@ -146,6 +146,48 @@ class ItauGatewayTest extends TestCase
         );
     }
 
+    public function testCriarBolecodePixLegadoFormataPercentuaisSemPonto(): void
+    {
+        $this->enqueueAuthResponse();
+        $this->fakeHttp->addResponse(200, [
+            'dados_qrcode' => [
+                'emv' => '000201BRGOVBCBPIX',
+            ],
+            'dado_boleto' => [
+                'dados_individuais_boleto' => [[
+                    'id_boleto_individual' => 'pix-percent-001',
+                    'numero_nosso_numero' => '00000001',
+                    'valor_titulo' => '00000000000015000',
+                ]],
+            ],
+        ]);
+
+        $gateway = $this->createGateway([
+            'pixBaseUrl' => 'https://secure.api.itau/pix_recebimentos_conciliacoes/v2',
+            'pixEndpointPath' => '/boletos_pix',
+            'pixLegacyPayload' => true,
+        ]);
+        $boleto = $this->createBoleto([
+            'juros' => [
+                'percentual' => '1',
+            ],
+            'multa' => [
+                'percentual' => '2',
+                'diasAposVencimento' => 1,
+            ],
+            'dadosExtras' => [
+                'bolecodePix' => true,
+                'chavePix' => '12345678000190',
+            ],
+        ]);
+
+        $gateway->criarBoleto($boleto);
+
+        $body = $this->fakeHttp->getLastRequest()['options']['body'];
+        $this->assertSame('000000100000', $body['dado_boleto']['juros']['percentual_juros']);
+        $this->assertSame('000000200000', $body['dado_boleto']['multa']['percentual_multa']);
+    }
+
     public function testCriarBoletoUsandoApiBoletosV1(): void
     {
         $this->enqueueAuthResponse();

@@ -569,7 +569,7 @@ class ItauMapper
                     ? 'percentual_desconto'
                     : 'valor_desconto';
                 $mapped[$field] = $field === 'percentual_desconto'
-                    ? $this->formatPercent((string) $item['valor'])
+                    ? $this->formatBoletoPercent((string) $item['valor'])
                     : ($pix ? $this->formatMoney((string) $item['valor']) : $this->formatLegacyMoney((string) $item['valor']));
             }
             $items[] = $mapped;
@@ -591,7 +591,7 @@ class ItauMapper
         $dado['multa'] = [
             'codigo_tipo_multa' => $boleto->dadosExtras['codigo_tipo_multa'] ?? '02',
             'quantidade_dias_multa' => $boleto->multa->diasAposVencimento,
-            'percentual_multa' => $this->formatPercent($boleto->multa->percentual),
+            'percentual_multa' => $this->formatBoletoPercent($boleto->multa->percentual),
         ];
     }
 
@@ -604,7 +604,7 @@ class ItauMapper
         $dado['juros'] = [
             'codigo_tipo_juros' => $boleto->dadosExtras['codigo_tipo_juros'] ?? '90',
             'quantidade_dias_juros' => $boleto->dadosExtras['quantidade_dias_juros'] ?? 1,
-            'percentual_juros' => $this->formatPercent($boleto->juros->percentual),
+            'percentual_juros' => $this->formatBoletoPercent($boleto->juros->percentual),
         ];
     }
 
@@ -905,6 +905,23 @@ class ItauMapper
         }
 
         return number_format((float) $normalized, 5, '.', '');
+    }
+
+    private function formatBoletoPercent(string $value): string
+    {
+        if (!$this->pixLegacyPayload) {
+            return $this->formatPercent($value);
+        }
+
+        return $this->formatLegacyPercent($value);
+    }
+
+    private function formatLegacyPercent(string $value): string
+    {
+        $decimal = $this->formatPercent($value);
+        $digits = str_replace('.', '', $decimal);
+
+        return str_pad($digits, 12, '0', STR_PAD_LEFT);
     }
 
     private function firstItem(array $items): array
