@@ -89,6 +89,9 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
         $this->pixEndpointPath = $this->normalizeEndpointPath(
             $config['pixEndpointPath'] ?? ($this->pixLegacyPayload ? '/boletos_pix' : '/boletos-pix')
         );
+        if ($this->pixEndpointPath === '/boletos_pix') {
+            $this->pixLegacyPayload = true;
+        }
         $this->usarApiBoletosV1 = (bool) ($config['usarApiBoletosV1'] ?? $config['useBoletoV1'] ?? false);
         $this->webhookTiposNotificacoes = $this->resolveWebhookTiposNotificacoes($config);
 
