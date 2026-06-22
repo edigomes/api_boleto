@@ -194,6 +194,7 @@ class ItauMapperTest extends TestCase
                 ],
                 'dados_qrcode' => [
                     'emv' => '000201BRGOVBCBPIX',
+                    'txid' => 'BL1234567890123456789012345678901',
                     'location' => 'https://api.itau.com.br/pix/qr/v2/123',
                 ],
             ],
@@ -208,6 +209,7 @@ class ItauMapperTest extends TestCase
         $this->assertSame('150.00', $response->valor);
         $this->assertSame('2026-05-01', $response->vencimento);
         $this->assertSame('000201BRGOVBCBPIX', $response->qrCodePix);
+        $this->assertSame('BL1234567890123456789012345678901', $response->pixTxid);
         $this->assertSame('https://api.itau.com.br/pix/qr/v2/123', $response->qrCodeUrl);
     }
 
@@ -223,6 +225,7 @@ class ItauMapperTest extends TestCase
                 'dataVencimento' => '2026-05-01',
                 'base64' => 'JVBERi0xLjQ=',
                 'emv' => '000201BRGOVBCBPIX',
+                'txid' => 'V1TXID123456789012345678901234',
                 'location' => 'https://api.itau.com.br/pix/qr/v2/123',
             ],
         ];
@@ -237,6 +240,7 @@ class ItauMapperTest extends TestCase
         $this->assertSame('2026-05-01', $response->vencimento);
         $this->assertSame('JVBERi0xLjQ=', $response->pdfBase64);
         $this->assertSame('000201BRGOVBCBPIX', $response->qrCodePix);
+        $this->assertSame('V1TXID123456789012345678901234', $response->pixTxid);
         $this->assertSame('https://api.itau.com.br/pix/qr/v2/123', $response->qrCodeUrl);
     }
 

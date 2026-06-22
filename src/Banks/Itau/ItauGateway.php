@@ -26,6 +26,7 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
     private const DEFAULT_LISTA_BASE_URL = 'https://boleto.api.itau.com/boleto/v1';
     private const DEFAULT_BOLETO_V1_BASE_URL = 'https://boleto.api.itau.com/boleto/v1';
     private const DEFAULT_WEBHOOK_BASE_URL = 'https://boletos.cloud.itau.com.br/boletos/v3';
+    private const DEFAULT_PIX_REGULATORIO_BASE_URL = 'https://pix-pj.api.itau.com/regulatorio-pix/v2';
 
     private ItauAuthenticator $authenticator;
 
@@ -55,6 +56,8 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
 
     private string $pixBaseUrl;
 
+    private string $pixRegulatorioBaseUrl;
+
     private string $pixEndpointPath;
 
     private bool $pixLegacyPayload;
@@ -81,6 +84,12 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
             '/'
         );
         $this->pixBaseUrl = rtrim($config['pixBaseUrl'] ?? '', '/');
+        $this->pixRegulatorioBaseUrl = rtrim(
+            $config['pixRegulatorioBaseUrl']
+                ?? $config['pixWebhookBaseUrl']
+                ?? self::DEFAULT_PIX_REGULATORIO_BASE_URL,
+            '/'
+        );
         $this->pixLegacyPayload = (bool) (
             $config['pixLegacyPayload']
             ?? $config['bolecodeLegacyPayload']
@@ -340,6 +349,98 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
         return true;
     }
 
+    public function setupPixWebhook(string $chave, string $webhookUrl): array
+    {
+        $chave = trim($chave);
+        $webhookUrl = rtrim(trim($webhookUrl), '/');
+
+        if ($chave === '') {
+            throw new BoletoException("Parametro 'chave' e obrigatorio para setup de webhook Pix Itau.");
+        }
+
+        if ($webhookUrl === '') {
+            throw new BoletoException("Parametro 'webhookUrl' e obrigatorio para setup de webhook Pix Itau.");
+        }
+
+        $response = $this->authenticatedRequest(
+            'PUT',
+            $this->pixRegulatorioBaseUrl . '/webhook/' . rawurlencode($chave),
+            ['webhookUrl' => $webhookUrl],
+            [],
+            true
+        );
+
+        return $response['body'] ?? [];
+    }
+
+    public function consultarPixWebhook(?string $chave = null, array $filtros = []): array
+    {
+        $url = $this->pixRegulatorioBaseUrl . '/webhook';
+
+        if ($chave !== null && trim($chave) !== '') {
+            $url .= '/' . rawurlencode(trim($chave));
+        }
+
+        $response = $this->authenticatedRequest(
+            'GET',
+            $url,
+            [],
+            $this->normalizePixWebhookFilters($filtros),
+            true
+        );
+
+        return $response['body'] ?? [];
+    }
+
+    public function excluirPixWebhook(string $chave): bool
+    {
+        $chave = trim($chave);
+        if ($chave === '') {
+            throw new BoletoException("Parametro 'chave' e obrigatorio para excluir webhook Pix Itau.");
+        }
+
+        $this->authenticatedRequest(
+            'DELETE',
+            $this->pixRegulatorioBaseUrl . '/webhook/' . rawurlencode($chave),
+            [],
+            [],
+            true
+        );
+
+        return true;
+    }
+
+    public function consultarPixRecebidos(array $filtros): array
+    {
+        $response = $this->authenticatedRequest(
+            'GET',
+            $this->pixRegulatorioBaseUrl . '/pix',
+            [],
+            $this->normalizePixRecebidosFilters($filtros),
+            true
+        );
+
+        return $response['body'] ?? [];
+    }
+
+    public function consultarPixRecebido(string $endToEndId): array
+    {
+        $endToEndId = trim($endToEndId);
+        if ($endToEndId === '') {
+            throw new BoletoException("Parametro 'endToEndId' e obrigatorio para consultar Pix Itau.");
+        }
+
+        $response = $this->authenticatedRequest(
+            'GET',
+            $this->pixRegulatorioBaseUrl . '/pix/' . rawurlencode($endToEndId),
+            [],
+            [],
+            true
+        );
+
+        return $response['body'] ?? [];
+    }
+
     public function consultarFrancesas(array $filtros = []): array
     {
         $response = $this->authenticatedRequest(
@@ -558,6 +659,36 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
         return ['data' => $data];
     }
 
+    private function normalizePixWebhookFilters(array $filtros): array
+    {
+        return array_filter([
+            'inicio' => $filtros['inicio'] ?? null,
+            'fim' => $filtros['fim'] ?? null,
+            'paginacao.paginaAtual' => $filtros['paginaAtual'] ?? $filtros['paginacao.paginaAtual'] ?? null,
+            'paginacao.itensPorPagina' => $filtros['itensPorPagina'] ?? $filtros['paginacao.itensPorPagina'] ?? null,
+        ], static fn($value): bool => $value !== null && $value !== '');
+    }
+
+    private function normalizePixRecebidosFilters(array $filtros): array
+    {
+        foreach (['inicio', 'fim'] as $field) {
+            if (empty($filtros[$field])) {
+                throw new BoletoException("Informe '{$field}' para consultar Pix recebidos no Itau.");
+            }
+        }
+
+        return array_filter([
+            'inicio' => $filtros['inicio'],
+            'fim' => $filtros['fim'],
+            'txidPresente' => $filtros['txidPresente'] ?? $filtros['txid_presente'] ?? null,
+            'devolucaoPresente' => $filtros['devolucaoPresente'] ?? $filtros['devolucao_presente'] ?? null,
+            'cpf' => $filtros['cpf'] ?? null,
+            'cnpj' => $filtros['cnpj'] ?? null,
+            'paginacao.paginaAtual' => $filtros['paginaAtual'] ?? $filtros['paginacao.paginaAtual'] ?? null,
+            'paginacao.itensPorPagina' => $filtros['itensPorPagina'] ?? $filtros['paginacao.itensPorPagina'] ?? null,
+        ], static fn($value): bool => $value !== null && $value !== '');
+    }
+
     private function resolveTokenStorage(array $config): TokenStorageInterface
     {
         if (isset($config['tokenStorage']) && $config['tokenStorage'] instanceof TokenStorageInterface) {
@@ -625,6 +756,8 @@ class ItauGateway implements BoletoGatewayInterface, BankSetupInterface, Configu
             ->optional('webhookBaseUrl', 'string', self::DEFAULT_WEBHOOK_BASE_URL, 'Base URL webhook boletos v3')
             ->optional('boletosV3BaseUrl', 'string', self::DEFAULT_WEBHOOK_BASE_URL, 'Base URL API Boletos v3')
             ->optional('pixBaseUrl', 'string', '', 'Base URL Bolecode Pix')
+            ->optional('pixRegulatorioBaseUrl', 'string', self::DEFAULT_PIX_REGULATORIO_BASE_URL, 'Base URL regulatorio Pix')
+            ->optional('pixWebhookBaseUrl', 'string', self::DEFAULT_PIX_REGULATORIO_BASE_URL, 'Alias para pixRegulatorioBaseUrl')
             ->optional('pixEndpointPath', 'string', '/boletos-pix', 'Path de emissao Bolecode Pix')
             ->optional('pixLegacyPayload', 'bool', false, 'Usa payload Bolecode legado/oficial da colecao Postman')
             ->optional('bolecodeLegacyPayload', 'bool', false, 'Alias para pixLegacyPayload')

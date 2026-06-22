@@ -34,6 +34,9 @@ class BoletoResponse
     /** @var string Payload do QR Code PIX (copia e cola), quando disponivel */
     public string $qrCodePix;
 
+    /** @var string Txid do QR Code PIX, quando retornado pelo banco */
+    public string $pixTxid;
+
     /** @var string URL da imagem do QR Code PIX, quando disponivel */
     public string $qrCodeUrl;
 
@@ -52,6 +55,7 @@ class BoletoResponse
         $this->urlPdf = '';
         $this->pdfBase64 = '';
         $this->qrCodePix = '';
+        $this->pixTxid = '';
         $this->qrCodeUrl = '';
         $this->dadosOriginais = [];
     }
@@ -70,6 +74,7 @@ class BoletoResponse
         $response->urlPdf = (string)($data['urlPdf'] ?? '');
         $response->pdfBase64 = (string)($data['pdfBase64'] ?? '');
         $response->qrCodePix = (string)($data['qrCodePix'] ?? '');
+        $response->pixTxid = (string)($data['pixTxid'] ?? '');
         $response->qrCodeUrl = (string)($data['qrCodeUrl'] ?? '');
         $response->dadosOriginais = $data['dadosOriginais'] ?? [];
 
@@ -89,6 +94,7 @@ class BoletoResponse
             'urlPdf'         => $this->urlPdf,
             'pdfBase64'      => $this->pdfBase64,
             'qrCodePix'      => $this->qrCodePix,
+            'pixTxid'        => $this->pixTxid,
             'qrCodeUrl'      => $this->qrCodeUrl,
             'dadosOriginais' => $this->dadosOriginais,
         ];

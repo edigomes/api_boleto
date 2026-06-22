@@ -230,6 +230,14 @@ class ItauMapper
             $apiData['pixCopiaECola'] ?? null,
             $apiData['qrCodePix'] ?? null,
         ]);
+        $response->pixTxid = (string) $this->firstNonEmpty([
+            $qrcode['txid'] ?? null,
+            $qrcode['txId'] ?? null,
+            $apiData['txid'] ?? null,
+            $apiData['txId'] ?? null,
+            $data['txid'] ?? null,
+            $data['txId'] ?? null,
+        ]);
         $response->qrCodeUrl = (string) $this->firstNonEmpty([
             $qrcode['location'] ?? null,
             $apiData['location'] ?? null,

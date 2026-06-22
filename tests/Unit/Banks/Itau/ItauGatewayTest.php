@@ -575,6 +575,63 @@ class ItauGatewayTest extends TestCase
         $this->assertSame(['data' => []], $result);
     }
 
+    public function testSetupPixWebhook(): void
+    {
+        $this->enqueueAuthResponse();
+        $this->fakeHttp->addResponse(201, [
+            'webhookUrl' => 'https://app.test/api/itau',
+            'chave' => 'financeiro6@chlorophylla.com.br',
+        ]);
+
+        $gateway = $this->createGateway([
+            'pixRegulatorioBaseUrl' => 'https://pix-pj.example.com/regulatorio-pix/v2',
+        ]);
+        $result = $gateway->setupPixWebhook(
+            'financeiro6@chlorophylla.com.br',
+            'https://app.test/api/itau'
+        );
+
+        $this->assertSame('financeiro6@chlorophylla.com.br', $result['chave']);
+
+        $lastRequest = $this->fakeHttp->getLastRequest();
+        $this->assertSame('PUT', $lastRequest['method']);
+        $this->assertSame(
+            'https://pix-pj.example.com/regulatorio-pix/v2/webhook/financeiro6%40chlorophylla.com.br',
+            $lastRequest['url']
+        );
+        $this->assertSame('https://app.test/api/itau', $lastRequest['options']['body']['webhookUrl']);
+        $this->assertTrue($this->hasHeader($lastRequest['options']['headers'], 'auth: Bearer fake-token-itau'));
+    }
+
+    public function testConsultarPixRecebidos(): void
+    {
+        $this->enqueueAuthResponse();
+        $this->fakeHttp->addResponse(200, [
+            'pix' => [[
+                'endToEndId' => 'E123',
+                'txid' => 'TX123',
+                'valor' => '1.00',
+            ]],
+        ]);
+
+        $gateway = $this->createGateway([
+            'pixRegulatorioBaseUrl' => 'https://pix-pj.example.com/regulatorio-pix/v2',
+        ]);
+        $result = $gateway->consultarPixRecebidos([
+            'inicio' => '2026-06-20T00:00:00Z',
+            'fim' => '2026-06-20T23:59:59Z',
+            'txidPresente' => true,
+        ]);
+
+        $this->assertSame('TX123', $result['pix'][0]['txid']);
+
+        $lastRequest = $this->fakeHttp->getLastRequest();
+        $this->assertSame('GET', $lastRequest['method']);
+        $this->assertSame('https://pix-pj.example.com/regulatorio-pix/v2/pix', $lastRequest['url']);
+        $this->assertSame('2026-06-20T00:00:00Z', $lastRequest['options']['query']['inicio']);
+        $this->assertTrue($lastRequest['options']['query']['txidPresente']);
+    }
+
     public function testConsultarFrancesasDerivaAgenciaContaDacDoBeneficiario(): void
     {
         $this->enqueueAuthResponse();

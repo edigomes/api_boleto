@@ -27,6 +27,7 @@ use ApiBoleto\DTO\Boleto;
 use ApiBoleto\Exceptions\ApiException;
 use ApiBoleto\Exceptions\AuthenticationException;
 use ApiBoleto\Exceptions\BoletoException;
+use ApiBoleto\Pdf\BoletoPdfRenderer;
 
 $config = require __DIR__ . '/itau_config.php';
 $config['etapaProcesso'] = itau_example_env('ITAU_PIX_ETAPA_PROCESSO', 'simulacao');
@@ -96,6 +97,17 @@ try {
 
     echo "=== Dados originais da API ===\n";
     echo json_encode($response->dadosOriginais, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+
+    $pdfPath = itau_example_env('ITAU_OUTPUT_PDF');
+    if ($pdfPath !== '') {
+        $pdf = (new BoletoPdfRenderer())->render($response, [
+            'bankName' => 'Banco Itau S.A.',
+            'bankCode' => '341',
+        ]);
+
+        file_put_contents($pdfPath, $pdf);
+        echo "\nPDF salvo em: {$pdfPath} (" . strlen($pdf) . " bytes)\n";
+    }
 } catch (AuthenticationException $e) {
     echo "ERRO DE AUTENTICACAO: {$e->getMessage()}\n";
 } catch (ApiException $e) {
